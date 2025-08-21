@@ -2,7 +2,7 @@
 
 # WavesOS Installation Script - Main Entry Point
 # A custom Arch Linux distribution installer
-# Version: 3.0 - Modular Architecture
+# Version: 3.0 - Modular Architecture with Futuristic UI
 
 set -euo pipefail # Exit on error, undefined vars, pipe failures
 
@@ -15,60 +15,99 @@ source "$SCRIPT_DIR/system.sh"
 source "$SCRIPT_DIR/desktop.sh"
 source "$SCRIPT_DIR/bootloader.sh"
 
-# Main installation function
+# Main installation function with enhanced UI
 main() {
+    # Initialize futuristic UI
     show_banner
-
+    
+    # Initialize step counter for the entire installation process
+    init_steps 25  # Total number of major steps
+    
     # Pre-installation checks
+    next_step
     check_root
+    next_step
     check_live_env
+    next_step
     check_tools
+    next_step
     check_network
+    next_step
     update_clock
 
     # Disk preparation
+    next_step
     detect_disks
+    next_step
     show_hardware
+    next_step
     select_disks
+    next_step
     detect_boot_mode
+    next_step
     configure_partitions
+    next_step
     confirm_partitioning
 
     # Disk operations
+    next_step
     create_partitions
+    next_step
     format_partitions
+    next_step
     mount_partitions
 
     # System installation
+    next_step
     update_mirrorlist
+    next_step
     install_base_system
+    next_step
     install_bootloader_packages
+    next_step
     install_graphics_drivers
+    next_step
     install_desktop_environment
+    next_step
     install_custom_packages
+    next_step
     copy_custom_repo
+    next_step
     generate_fstab
 
     # System configuration
+    next_step
     configure_system
+    next_step
     apply_chroot_config
+    next_step
     install_bootloader
+    next_step
     install_wavesos_customizations
+    next_step
     install_SDDM_theme
+    next_step
     install_gnome_extensions
+    next_step
     setup_kando_autostart
+    next_step
     set_burn_tvglitch_chroot
+    next_step
     configure_os_release
+    next_step
     set_default_WavesOS_theme
 
     # Final steps
+    next_step
     verify_installation
+    next_step
     cleanup_installation
+    next_step
     show_installation_summary
 }
 
-# Error handling
-trap 'error "Installation interrupted by user or system error"' INT TERM
+# Enhanced error handling with futuristic UI
+trap 'echo -e "\n${NEON_PINK}${BOLD}⚠️  Installation interrupted by user or system error${NC}"; error "Installation interrupted by user or system error"' INT TERM
 
-# Run main installation
+# Run main installation with enhanced UI
 main "$@"

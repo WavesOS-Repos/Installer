@@ -3,10 +3,11 @@
 
 # WavesOS Installation Script - Hardware Detection Library
 # Contains disk detection, hardware specs, and disk selection functions
+# Enhanced with futuristic UI
 
 # Enhanced disk detection with USB exclusion
 detect_disks() {
-    log "Detecting available disks (excluding USB drives)..."
+    show_status "checking" "Scanning for available storage devices..."
     
     # Get all block devices that are disks
     mapfile -t ALL_DISKS < <(lsblk -d -n -o NAME,SIZE,TYPE,TRAN,HOTPLUG | grep disk)
@@ -42,51 +43,81 @@ detect_disks() {
         error "No suitable disks found! All detected disks appear to be USB or system devices."
     fi
     
-    success "Found ${#DISK_LIST[@]} suitable disk(s) for installation"
+    show_status "success" "Found ${#DISK_LIST[@]} suitable disk(s) for installation"
 }
 
-# Display hardware specs
+# Display hardware specs with futuristic styling
 show_hardware() {
-    log "Hardware Specifications:"
-    info "CPU: $(lscpu | grep "Model name" | awk -F: '{print $2}' | xargs)"
-    info "RAM: $(free -h | awk '/^Mem:/ {print $2}')"
-    info "GPU: $(lspci | grep -i vga | cut -d: -f3 | xargs || echo 'Not detected')"
+    echo -e "${NEON_PURPLE}${BOLD}🔍 Hardware Specifications:${NC}"
     echo
-    info "Available storage devices:"
-    printf "%-10s %-10s %-10s %-10s %s\n" "DEVICE" "SIZE" "TYPE" "TRANSPORT" "MODEL"
-    printf "%-10s %-10s %-10s %-10s %s\n" "------" "----" "----" "---------" "-----"
+    
+    # Create a futuristic hardware info display
+    echo -e "${DARK_GRAY}┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐${NC}"
+    
+    # CPU Info
+    local cpu_info=$(lscpu | grep "Model name" | awk -F: '{print $2}' | xargs)
+    echo -e "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}CPU:${NC} ${SILVER}$cpu_info${NC}${DARK_GRAY}${NC}"
+    
+    # RAM Info
+    local ram_info=$(free -h | awk '/^Mem:/ {print $2}')
+    echo -e "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}RAM:${NC} ${SILVER}$ram_info${NC}${DARK_GRAY}${NC}"
+    
+    # GPU Info
+    local gpu_info=$(lspci | grep -i vga | cut -d: -f3 | xargs || echo 'Not detected')
+    echo -e "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}GPU:${NC} ${SILVER}$gpu_info${NC}${DARK_GRAY}${NC}"
+    
+    echo -e "${DARK_GRAY}└─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘${NC}"
+    echo
+    
+    # Storage devices table
+    echo -e "${NEON_GREEN}${BOLD}💾 Available Storage Devices:${NC}"
+    echo -e "${DARK_GRAY}┌────────────┬────────────┬────────────┬────────────┬─────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}DEVICE${NC}     ${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}SIZE${NC}       ${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}TYPE${NC}       ${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}TRANSPORT${NC}  ${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}MODEL${NC}${DARK_GRAY}${NC}"
+    echo -e "${DARK_GRAY}├────────────┼────────────┼────────────┼────────────┼─────────────────────────────────────────────────────────┤${NC}"
     
     for disk_info in "${DISK_LIST[@]}"; do
         read -r name size type tran hotplug <<<"$disk_info"
         model=$(lsblk -d -n -o MODEL "/dev/$name" 2>/dev/null || echo "Unknown")
-        printf "%-10s %-10s %-10s %-10s %s\n" "/dev/$name" "$size" "$type" "$tran" "$model"
+        printf "${DARK_GRAY}│${NC} ${NEON_GREEN}/dev/%-8s${NC} ${DARK_GRAY}│${NC} ${SILVER}%-10s${NC} ${DARK_GRAY}│${NC} ${SILVER}%-10s${NC} ${DARK_GRAY}│${NC} ${SILVER}%-10s${NC} ${DARK_GRAY}│${NC} ${SILVER}%-65s${NC} ${DARK_GRAY}│${NC}\n" "$name" "$size" "$type" "$tran" "$model"
     done
+    
+    echo -e "${DARK_GRAY}└────────────┴────────────┴────────────┴────────────┴─────────────────────────────────────────────────────────┘${NC}"
     echo
-    read -p "Press Enter to continue..."
+    
+    echo -e "${NEON_CYAN}${BOLD}Press Enter to continue...${NC}"
+    read -r
 }
 
-# Disk selection with enhanced validation
+# Disk selection with enhanced validation and futuristic UI
 select_disks() {
-    # Show disk options
-    echo "Available disks for installation:"
+    echo -e "${NEON_PURPLE}${BOLD}🎯 Disk Selection${NC}"
+    echo
+    
+    # Show disk options with enhanced styling
+    echo -e "${NEON_GREEN}${BOLD}Available disks for installation:${NC}"
+    echo -e "${DARK_GRAY}┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐${NC}"
+    
     for i in "${!DISK_LIST[@]}"; do
         read -r name size type tran hotplug <<<"${DISK_LIST[$i]}"
         model=$(lsblk -d -n -o MODEL "/dev/$name" 2>/dev/null || echo "Unknown")
-        echo "$i) /dev/$name - $size ($type via $tran) - $model"
+        printf "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}%d)${NC} ${NEON_GREEN}/dev/%-8s${NC} ${DARK_GRAY}-${NC} ${SILVER}%-8s${NC} ${DARK_GRAY}(${NC}${SILVER}%s${NC} ${DARK_GRAY}via${NC} ${SILVER}%s${NC}${DARK_GRAY})${NC} ${DARK_GRAY}-${NC} ${SILVER}%-40s${NC} ${DARK_GRAY}│${NC}\n" "$i" "$name" "$size" "$type" "$tran" "$model"
     done
+    
+    echo -e "${DARK_GRAY}└─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘${NC}"
     echo
     
-    # System disk selection
+    # System disk selection with enhanced validation
     while true; do
-        read -p "Select system disk number (for root installation): " SYS_DISK_IDX
+        echo -e "${NEON_ORANGE}${BOLD}Select system disk number (for root installation):${NC} "
+        read -r SYS_DISK_IDX
         if [[ "$SYS_DISK_IDX" =~ ^[0-9]+$ ]] && [ "$SYS_DISK_IDX" -lt ${#DISK_LIST[@]} ]; then
             break
         fi
-        error "Invalid system disk selection. Please enter a number between 0 and $((${#DISK_LIST[@]} - 1))"
+        echo -e "${NEON_PINK}${BOLD}Invalid system disk selection. Please enter a number between 0 and $((${#DISK_LIST[@]} - 1))${NC}"
     done
     
     SYS_DISK="/dev/$(echo "${DISK_LIST[$SYS_DISK_IDX]}" | awk '{print $1}')"
-    log "Selected system disk: $SYS_DISK"
+    show_status "success" "Selected system disk: $SYS_DISK"
     
     # Verify disk is not mounted
     if mount | grep -q "$SYS_DISK"; then
@@ -97,30 +128,39 @@ select_disks() {
     unset 'DISK_LIST[$SYS_DISK_IDX]'
     DISK_LIST=("${DISK_LIST[@]}") # Reindex array
     
-    # Storage disk selection (optional)
+    # Storage disk selection (optional) with enhanced UI
     STORE_DISK=""
     if [ ${#DISK_LIST[@]} -gt 0 ]; then
         echo
-        echo "Remaining disks for additional storage:"
+        echo -e "${NEON_GREEN}${BOLD}Remaining disks for additional storage:${NC}"
+        echo -e "${DARK_GRAY}┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐${NC}"
+        
         for i in "${!DISK_LIST[@]}"; do
             read -r name size type tran hotplug <<<"${DISK_LIST[$i]}"
             model=$(lsblk -d -n -o MODEL "/dev/$name" 2>/dev/null || echo "Unknown")
-            echo "$i) /dev/$name - $size ($type via $tran) - $model"
+            printf "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}%d)${NC} ${NEON_GREEN}/dev/%-8s${NC} ${DARK_GRAY}-${NC} ${SILVER}%-8s${NC} ${DARK_GRAY}(${NC}${SILVER}%s${NC} ${DARK_GRAY}via${NC} ${SILVER}%s${NC}${DARK_GRAY})${NC} ${DARK_GRAY}-${NC} ${SILVER}%-40s${NC} ${DARK_GRAY}│${NC}\n" "$i" "$name" "$size" "$type" "$tran" "$model"
         done
-        read -p "Select storage disk number (or press Enter for none): " STORE_DISK_IDX
+        
+        echo -e "${DARK_GRAY}└─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘${NC}"
+        echo
+        
+        echo -e "${NEON_ORANGE}${BOLD}Select storage disk number (or press Enter for none):${NC} "
+        read -r STORE_DISK_IDX
         if [[ "$STORE_DISK_IDX" =~ ^[0-9]+$ ]] && [ "$STORE_DISK_IDX" -lt ${#DISK_LIST[@]} ]; then
             STORE_DISK="/dev/$(echo "${DISK_LIST[$STORE_DISK_IDX]}" | awk '{print $1}')"
-            log "Selected storage disk: $STORE_DISK"
+            show_status "success" "Selected storage disk: $STORE_DISK"
         fi
     fi
 }
 
-# Enhanced boot mode detection
+# Enhanced boot mode detection with futuristic UI
 detect_boot_mode() {
+    show_status "checking" "Detecting system boot mode..."
+    
     if [ -d /sys/firmware/efi ]; then
         BOOT_MODE="uefi"
         PTABLE="gpt"
-        log "UEFI system detected, using GPT partition table"
+        show_status "success" "UEFI system detected, using GPT partition table"
         
         # Verify EFI variables are accessible
         if ! efivar -l &>/dev/null; then
@@ -129,6 +169,6 @@ detect_boot_mode() {
     else
         BOOT_MODE="bios"
         PTABLE="msdos"
-        log "BIOS system detected, using MBR partition table"
+        show_status "success" "BIOS system detected, using MBR partition table"
     fi
 }
