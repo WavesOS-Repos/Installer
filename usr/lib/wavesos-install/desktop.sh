@@ -6,6 +6,7 @@
 
 # Install WavesOS desktop environment
 install_desktop_environment() {
+    section_header "Desktop • Environment"
     log "Installing WavesOS desktop environment..."
     
     local de_packages=(
@@ -68,6 +69,7 @@ install_desktop_environment() {
 
 # Install and configure Hyprland configs
 install_wavesos_customizations() {
+    section_header "Desktop • WavesOS Customizations"
     log "Installing WavesOS customizations..."
 
     # Verify /mnt is mounted
@@ -128,6 +130,7 @@ install_wavesos_customizations() {
 
 # Install WavesSDDM
 install_SDDM_theme() {
+    section_header "Desktop • SDDM Theme"
     log "Installing WavesOS SDDM..."
 
     # Verify /mnt is mounted
@@ -154,6 +157,7 @@ install_SDDM_theme() {
 }
 
 install_gnome_extensions() {
+    section_header "Desktop • GNOME Extensions"
     log "Installing GNOME Shell extensions for $USERNAME..."
 
     # Verify /mnt is mounted
@@ -218,6 +222,7 @@ install_gnome_extensions() {
 }
 
 setup_kando_autostart() {
+    section_header "Desktop • Kando Autostart"
     log "Setting up kando-bin autostart for $USERNAME..."
 
     # Verify /mnt is mounted
@@ -249,6 +254,7 @@ EOF
 }
 
 set_burn_tvglitch_chroot() {
+    section_header "Desktop • TV-Glitch"
     log "Setting Burn My Windows TV-Glitch effect for $USERNAME..."
 
     # Verify /mnt is mounted
@@ -313,6 +319,7 @@ BMWS_EOF
 }
 
 set_default_WavesOS_theme() {
+    section_header "Desktop • Default Theme"
     log "Setting WavesOS theme for $USERNAME..."
 
     # Verify /mnt is mounted

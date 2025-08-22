@@ -7,6 +7,7 @@
 
 # Enhanced disk detection with USB exclusion
 detect_disks() {
+    section_header "Hardware • Disk Detection"
     show_status "checking" "Scanning for available storage devices..."
     
     # Get all block devices that are disks
@@ -48,6 +49,7 @@ detect_disks() {
 
 # Display hardware specs with futuristic styling
 show_hardware() {
+    section_header "Hardware • System Overview"
     echo -e "${NEON_PURPLE}${BOLD}🔍 Hardware Specifications:${NC}"
     echo
     

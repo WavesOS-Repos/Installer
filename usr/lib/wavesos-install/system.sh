@@ -6,6 +6,7 @@
 
 # Update mirrorlist
 update_mirrorlist() {
+    section_header "System • Mirrors"
     log "Updating mirrorlist for optimal download speeds..."
     echo "Select your country for optimal mirrors:"
     echo "1) United States    2) United Kingdom   3) Germany"
@@ -35,6 +36,7 @@ update_mirrorlist() {
 
 # Install base system
 install_base_system() {
+    section_header "System • Base Packages"
     log "Installing base system packages..."
     
     local base_packages=(
@@ -55,6 +57,7 @@ install_base_system() {
 
 # Install bootloader packages
 install_bootloader_packages() {
+    section_header "System • Bootloader"
     log "Installing bootloader packages..."
     
     if [ "$BOOT_MODE" = "uefi" ]; then
@@ -74,6 +77,7 @@ install_bootloader_packages() {
 
 # Install graphics drivers
 install_graphics_drivers() {
+    section_header "System • Graphics"
     log "Graphics driver selection:"
     echo "1) Intel (open-source)"
     echo "2) AMD (open-source)" 
@@ -102,6 +106,7 @@ install_graphics_drivers() {
 
 # Install custom packages
 install_custom_packages() {
+    section_header "System • Custom Packages"
     if [ -f /root/packages.x86_64 ]; then
         log "Installing custom packages from /root/packages.x86_64..."
         mapfile -t custom_packages < <(grep -v '^#' /root/packages.x86_64 | grep -v '^\s*$')
@@ -124,6 +129,7 @@ install_custom_packages() {
 
 # Copy custom repository
 copy_custom_repo() {
+    section_header "System • Custom Repository"
     if [ -d /custom-repo ] && [ -f /custom-repo/custom-repo.db ]; then
         log "Copying custom repository to installed system..."
         mkdir -p /mnt/custom-repo
@@ -139,6 +145,7 @@ copy_custom_repo() {
 
 # Generate fstab
 generate_fstab() {
+    section_header "System • fstab"
     log "Generating filesystem table (fstab)..."
     if genfstab -U /mnt >> /mnt/etc/fstab; then
         success "fstab generated successfully"
@@ -149,6 +156,7 @@ generate_fstab() {
 
 # Configure system settings
 configure_system() {
+    section_header "System • Configure"
     log "Configuring system settings..."
     
     # Locale configuration
@@ -210,6 +218,7 @@ configure_system() {
 
 # Apply system configuration in chroot
 apply_chroot_config() {
+    section_header "System • Apply Config"
     log "Applying system configuration..."
     
     # Create chroot script
@@ -277,6 +286,7 @@ EOF
 
 # Configure OS release
 configure_os_release() {
+    section_header "System • os-release"
     log "Configuring /etc/os-release for WavesOS..."
 
     # Verify /mnt is mounted
@@ -305,6 +315,7 @@ configure_os_release() {
 
 # Final system verification
 verify_installation() {
+    section_header "System • Verification"
     log "Performing final system verification..."
     
     local checks_passed=0

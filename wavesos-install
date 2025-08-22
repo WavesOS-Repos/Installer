@@ -6,6 +6,105 @@
 
 set -euo pipefail # Exit on error, undefined vars, pipe failures
 
+# --- Futuristic Terminal UI Enhancements (non-functional, presentation only) ---
+# Independent UI helpers, do not alter installer logic or sourced functions.
+
+supports_truecolor() {
+	# Detect 24-bit color support in a conservative, safe way
+	if [ "${COLORTERM-}" = "truecolor" ] || [ "${COLORTERM-}" = "24bit" ]; then
+		return 0
+	fi
+	case "${TERM-}" in
+		*xterm-truecolor*|*24bit*) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+ui_tput() {
+	# Wrapper to guard against non-tput terminals
+	command -v tput >/dev/null 2>&1 && tput "$@" 2>/dev/null || true
+}
+
+ui_init_vars() {
+	UI_BOLD="$(ui_tput bold)"
+	UI_DIM="$(ui_tput dim)"
+	UI_RESET="$(ui_tput sgr0)"
+	UI_HIDE_CURSOR="\033[?25l"
+	UI_SHOW_CURSOR="\033[?25h"
+	UI_CLEAR="\033[2J\033[H"
+	UI_COLS=$(ui_tput cols || echo 80)
+}
+
+set_terminal_title() {
+	# Best-effort terminal title
+	echo -ne "\033]0;WavesOS Installer — Neon Horizon\007"
+}
+
+hide_cursor() { echo -ne "$UI_HIDE_CURSOR"; }
+show_cursor() { echo -ne "$UI_SHOW_CURSOR"; }
+
+print_rgb() {
+	# Usage: print_rgb R G B text...
+	local r=$1 g=$2 b=$3; shift 3
+	if supports_truecolor; then
+		echo -ne "\033[38;2;${r};${g};${b}m$*${UI_RESET}"
+	else
+		# Fallback to bold without color if 24-bit unsupported
+		echo -ne "${UI_BOLD}$*${UI_RESET}"
+	fi
+}
+
+gradient_line() {
+	# Render a centered gradient line with given text
+	local text="$1"
+	local len=${#text}
+	local pad=$(( (UI_COLS - len) / 2 ))
+	[ $pad -lt 0 ] && pad=0
+	local i r g b
+	printf "%*s" "$pad" ""
+	for (( i=0; i<len; i++ )); do
+		# Neon cyan → magenta sweep
+		r=$(( 120 + (135 * i / (len>1?len-1:1)) ))
+		g=$((  10 + (  0 * i / (len>1?len-1:1)) ))
+		b=$(( 200 - ( 80 * i / (len>1?len-1:1)) ))
+		char=${text:i:1}
+		print_rgb "$r" "$g" "$b" "$char"
+	done
+	echo
+}
+
+draw_neon_banner() {
+	ui_init_vars
+	set_terminal_title
+	echo -ne "$UI_CLEAR"
+	hide_cursor
+	local top="╔══════════════════════════════════════════════════════════════════════╗"
+	local mid="║" ; local bot="╚══════════════════════════════════════════════════════════════════════╝"
+	# Frame
+	gradient_line "$top"
+	gradient_line "${mid}                                                              ${mid}"
+	gradient_line "${mid}      ✨ WavesOS • Arch-powered • Lightning-fast • Installer ✨      ${mid}"
+	gradient_line "${mid}                                                              ${mid}"
+	gradient_line "$bot"
+	echo
+}
+
+intro_pulse() {
+	# Subtle, very fast pulse to feel alive without slowing installs
+	local pulse=("⟡" "✧" "✦" "✧")
+	for p in "${pulse[@]}"; do
+		printf "  %s Initializing UI...\r" "$p"
+		sleep 0.05
+	done
+	echo
+}
+
+restore_terminal_ui() {
+	# Always restore cursor and reset attributes
+	show_cursor
+	echo -ne "$UI_RESET"
+}
+
 # Source all library modules
 SCRIPT_DIR="/usr/lib/wavesos-install"
 source "$SCRIPT_DIR/utils.sh"
@@ -18,6 +117,8 @@ source "$SCRIPT_DIR/bootloader.sh"
 # Main installation function with enhanced UI
 main() {
     # Initialize futuristic UI
+    draw_neon_banner
+    intro_pulse
     show_banner
     
     # Initialize step counter for the entire installation process
@@ -108,6 +209,9 @@ main() {
 
 # Enhanced error handling with futuristic UI
 trap 'echo -e "\n${NEON_PINK}${BOLD}⚠️  Installation interrupted by user or system error${NC}"; error "Installation interrupted by user or system error"' INT TERM
+
+# Always restore terminal state on normal exit
+trap 'restore_terminal_ui' EXIT
 
 # Run main installation with enhanced UI
 main "$@"

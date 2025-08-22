@@ -6,6 +6,7 @@
 
 # Partition configuration
 configure_partitions() {
+    section_header "Partitioning • Plan Layout"
     # Get disk size for validation
     TOTAL_SIZE_BYTES=$(blockdev --getsize64 "$SYS_DISK")
     TOTAL_SIZE_GB=$((TOTAL_SIZE_BYTES / 1024 / 1024 / 1024))
@@ -65,6 +66,7 @@ configure_partitions() {
 
 # Confirm partitioning
 confirm_partitioning() {
+    section_header "Partitioning • Confirmation"
     echo
     echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${YELLOW}║                    PARTITIONING SUMMARY                   ║${NC}"
@@ -87,6 +89,7 @@ confirm_partitioning() {
 
 # Enhanced partitioning with better error handling
 create_partitions() {
+    section_header "Partitioning • Create"
     log "Creating partitions on $SYS_DISK..."
     
     # Unmount any mounted partitions from target disk
@@ -183,6 +186,7 @@ create_partitions() {
 
 # Format partitions with enhanced error handling
 format_partitions() {
+    section_header "Partitioning • Format"
     log "Formatting partitions..."
     
     if [ "$BOOT_MODE" = "uefi" ]; then
@@ -209,6 +213,7 @@ format_partitions() {
 
 # Mount partitions with verification
 mount_partitions() {
+    section_header "Partitioning • Mount"
     log "Mounting partitions..."
     
     # Mount root

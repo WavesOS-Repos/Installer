@@ -27,6 +27,7 @@ DARK_GRAY='\033[38;5;240m'
 LIGHT_GRAY='\033[38;5;248m'
 GOLD='\033[38;5;220m'
 SILVER='\033[38;5;252m'
+NEON_RED='\033[38;5;196m'
 
 # Terminal effects
 BOLD='\033[1m'
@@ -68,6 +69,67 @@ init_terminal() {
     echo -en "\033[?25h"
     # Clear screen
     clear
+}
+
+# Truecolor detection and helpers
+supports_truecolor() {
+    if [ "${COLORTERM-}" = "truecolor" ] || [ "${COLORTERM-}" = "24bit" ]; then
+        return 0
+    fi
+    case "${TERM-}" in
+        *xterm-truecolor*|*24bit*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+print_rgb() {
+    # Usage: print_rgb R G B text...
+    local r=$1 g=$2 b=$3; shift 3
+    if supports_truecolor; then
+        echo -ne "\033[38;2;${r};${g};${b}m$*${NC}"
+    else
+        echo -ne "${BOLD}$*${NC}"
+    fi
+}
+
+gradient_text() {
+    # Center and print a neon gradient line
+    local text="$1"
+    local len=${#text}
+    local pad=$(( (TERM_WIDTH - len) / 2 ))
+    [ $pad -lt 0 ] && pad=0
+    printf "%*s" "$pad" ""
+    local i r g b char
+    for (( i=0; i<len; i++ )); do
+        r=$(( 120 + (135 * i / (len>1?len-1:1)) ))
+        g=$((  10 + (  0 * i / (len>1?len-1:1)) ))
+        b=$(( 200 - ( 80 * i / (len>1?len-1:1)) ))
+        char=${text:i:1}
+        print_rgb "$r" "$g" "$b" "$char"
+    done
+    echo
+}
+
+set_terminal_title() {
+    echo -ne "\033]0;WavesOS Installer • Neon Horizon\007"
+}
+
+section_header() {
+    # Decorative header used across modules (purely visual)
+    local title="$1"
+    get_terminal_size
+    echo -e "${CLEAR_LINE}"
+    gradient_text "════════════════════════════════════════════════════════════════════════════"
+    gradient_text "  ✨  ${title}  ✨  "
+    gradient_text "════════════════════════════════════════════════════════════════════════════"
+    # Quick scanline shimmer (very short, non-blocking feel)
+    local width=$(( TERM_WIDTH > 80 ? 80 : TERM_WIDTH ))
+    local i
+    for (( i=1; i<=width; i+=8 )); do
+        printf "\r${DARK_GRAY}%*s${NC}" "$i" "▌"
+        sleep 0.01
+    done
+    printf "\r${CLEAR_LINE}"
 }
 
 # Advanced logging functions with futuristic styling
@@ -114,10 +176,17 @@ show_progress() {
     printf "\r${CLEAR_LINE}"
     printf "${NEON_PURPLE}${BOLD}[%3d%%]${NC} " "$percent"
     
-    # Animated progress bar
+    # Animated progress bar (breathing head)
     printf "${NEON_CYAN}[${NC}"
     if [ "$filled" -gt 0 ]; then
-        printf "%*s" "$filled" | tr ' ' '█'
+        local head_char="█"
+        [ $((current % 2)) -eq 0 ] && head_char="▓"
+        if [ "$filled" -gt 1 ]; then
+            printf "%*s" "$((filled-1))" | tr ' ' '█'
+            printf "%s" "$head_char"
+        else
+            printf "%s" "$head_char"
+        fi
     fi
     if [ "$empty" -gt 0 ]; then
         printf "%*s" "$empty" | tr ' ' '░'
@@ -154,6 +223,7 @@ spinner() {
 show_banner() {
     clear
     init_terminal
+    set_terminal_title
     
     # Animated color cycling banner
     local colors=("$NEON_BLUE" "$NEON_PURPLE" "$NEON_CYAN" "$NEON_GREEN" "$NEON_PINK")
@@ -277,6 +347,14 @@ init_steps() {
 
 next_step() {
     CURRENT_STEP=$((CURRENT_STEP + 1))
+    # Micro pulse animation for step transition
+    local pulse=("⟡" "✧" "✦" "✧")
+    local p
+    for p in "${pulse[@]}"; do
+        printf "\r${NEON_CYAN}${BOLD}%s${NC} Preparing step %s/%s..." "$p" "$CURRENT_STEP" "$TOTAL_STEPS"
+        sleep 0.05
+    done
+    printf "\r${CLEAR_LINE}"
     echo -e "${NEON_CYAN}${BOLD}🔄 Step $CURRENT_STEP/$TOTAL_STEPS${NC}"
 }
 
