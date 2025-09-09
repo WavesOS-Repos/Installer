@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # WavesOS Installation Script - Hardware Detection Library

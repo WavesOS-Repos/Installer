@@ -112,10 +112,21 @@ create_partitions() {
     else
         # Create BIOS boot partition
         parted "$SYS_DISK" --script mkpart primary 1MiB 2MiB || error "Failed to create BIOS boot partition"
-        parted "$SYS_DISK" --script set $PART_NUM bios_grub on || error "Failed to set bios_grub flag"
+        
+        # Try to set bios_grub flag with fallback
+        if ! parted "$SYS_DISK" --script set $PART_NUM bios_grub on 2>/dev/null; then
+            warning "Could not set bios_grub flag, trying alternative approach..."
+            # Alternative: Create a larger boot partition and set boot flag instead
+            parted "$SYS_DISK" --script rm $PART_NUM 2>/dev/null || true
+            parted "$SYS_DISK" --script mkpart primary ext2 1MiB 256MiB || error "Failed to create alternative boot partition"
+            parted "$SYS_DISK" --script set $PART_NUM boot on || warning "Could not set boot flag"
+            START_POS="256MiB"
+        else
+            START_POS="2MiB"
+        fi
+        
         BIOS_BOOT_PART="${SYS_DISK}${PART_NUM}"
         PART_NUM=$((PART_NUM + 1))
-        START_POS="2MiB"
     fi
     
     # Create swap partition

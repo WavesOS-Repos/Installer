@@ -63,8 +63,14 @@ else
     if grub-install --target=i386-pc --recheck "\$SYS_DISK"; then
         echo "BIOS GRUB installation successful"
     else
-        echo "ERROR: Failed to install GRUB to \$SYS_DISK"
-        exit 1
+        echo "Primary BIOS installation failed, trying alternative method..."
+        # Try installing with --force in case of blocklist issues
+        if grub-install --target=i386-pc --recheck --force "\$SYS_DISK"; then
+            echo "BIOS GRUB installation successful with --force"
+        else
+            echo "ERROR: Failed to install GRUB to \$SYS_DISK"
+            exit 1
+        fi
     fi
 fi
 
