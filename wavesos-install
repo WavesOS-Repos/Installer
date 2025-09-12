@@ -111,6 +111,7 @@ source "$SCRIPT_DIR/utils.sh"
 source "$SCRIPT_DIR/hardware.sh"
 source "$SCRIPT_DIR/partitioning.sh"
 source "$SCRIPT_DIR/system.sh"
+source "$SCRIPT_DIR/packages.sh"
 source "$SCRIPT_DIR/desktop.sh"
 source "$SCRIPT_DIR/bootloader.sh"
 

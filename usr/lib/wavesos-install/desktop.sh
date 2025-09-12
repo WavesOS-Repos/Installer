@@ -4,68 +4,7 @@
 # WavesOS Installation Script - Desktop Environment Library
 # Contains desktop installation and WavesOS customizations
 
-# Install WavesOS desktop environment
-install_desktop_environment() {
-    section_header "Desktop • Environment"
-    log "Installing WavesOS desktop environment..."
-    
-    local de_packages=(
-        # Hyprland and Wayland
-        hyprland waybar wofi dunst
-        xorg-xwayland qt5-wayland qt6-wayland
-        
-        # Audio
-        pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber
-        
-        # File manager and utilities
-        thunar thunar-volman gvfs tumbler
-        
-        # Applications
-        firefox alacritty kitty
-        
-        # Display manager
-        sddm
-        
-        # Fonts
-        ttf-dejavu ttf-liberation noto-fonts noto-fonts-emoji
-        ttf-fira-code ttf-opensans
-        
-        # System utilities
-        polkit-gnome
-        brightnessctl playerctl
-        grim slurp wl-clipboard
-        network-manager-applet
-        pavucontrol
-        
-        # Additional Hyprland ecosystem
-        hypridle hyprlock hyprpaper
-        xdg-desktop-portal-hyprland
-        
-        # Theme and customization
-        gtk3 gtk4
-        qt5ct qt6ct
-        
-        # System monitoring and utilities
-        htop neofetch
-        zip unzip p7zip
-        
-        # Development tools
-        code python python-pip nodejs npm
-    )
-    
-    info "Installing ${#de_packages[@]} desktop environment packages..."
-    
-    for i in "${!de_packages[@]}"; do
-        local current=$((i + 1))
-        show_progress "$current" "${#de_packages[@]}" "Installing ${de_packages[$i]}..."
-        
-        if ! pacstrap /mnt "${de_packages[$i]}" 2>/dev/null; then
-            warning "Failed to install ${de_packages[$i]}, continuing..."
-        fi
-    done
-    
-    success "Desktop environment installation completed"
-}
+# [Moved to packages.sh] install_desktop_environment
 
 # Install and configure Hyprland configs
 install_wavesos_customizations() {

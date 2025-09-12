@@ -34,98 +34,10 @@ update_mirrorlist() {
     success "Mirrorlist updated"
 }
 
-# Install base system
-install_base_system() {
-    section_header "System • Base Packages"
-    log "Installing base system packages..."
-    
-    local base_packages=(
-        base base-devel linux linux-firmware linux-headers
-        networkmanager dhcpcd iwd wireless_tools wpa_supplicant
-        sudo nano vim git curl wget rsync
-        bash-completion man-db man-pages
-        reflector pacman-contrib
-    )
-    
-    show_progress 1 3 "Installing base system..."
-    if ! pacstrap /mnt "${base_packages[@]}"; then
-        error "Failed to install base system packages"
-    fi
-    
-    success "Base system installed successfully"
-}
-
-# Install bootloader packages
-install_bootloader_packages() {
-    section_header "System • Bootloader"
-    log "Installing bootloader packages..."
-    
-    if [ "$BOOT_MODE" = "uefi" ]; then
-        show_progress 2 3 "Installing UEFI bootloader..."
-        if ! pacstrap /mnt grub efibootmgr dosfstools; then
-            error "Failed to install UEFI bootloader packages"
-        fi
-    else
-        show_progress 2 3 "Installing BIOS bootloader..."
-        if ! pacstrap /mnt grub; then
-            error "Failed to install BIOS bootloader packages"
-        fi
-    fi
-    
-    success "Bootloader packages installed"
-}
-
-# Install graphics drivers
-install_graphics_drivers() {
-    section_header "System • Graphics"
-    log "Graphics driver selection:"
-    echo "1) Intel (open-source)"
-    echo "2) AMD (open-source)" 
-    echo "3) NVIDIA (proprietary)"
-    echo "4) NVIDIA (open-source nouveau)"
-    echo "5) Generic/VM (VESA)"
-    
-    read -p "Select graphics driver (1-5): " GPU_CHOICE
-    
-    case $GPU_CHOICE in
-        1) gpu_packages=(xf86-video-intel intel-media-driver vulkan-intel) ;;
-        2) gpu_packages=(xf86-video-amdgpu mesa vulkan-radeon libva-mesa-driver) ;;
-        3) gpu_packages=(nvidia nvidia-utils nvidia-settings) ;;
-        4) gpu_packages=(xf86-video-nouveau mesa) ;;
-        5) gpu_packages=(xf86-video-vesa mesa) ;;
-        *) gpu_packages=(xf86-video-vesa mesa) ;;
-    esac
-    
-    show_progress 3 3 "Installing graphics drivers..."
-    if ! pacstrap /mnt "${gpu_packages[@]}"; then
-        warning "Some graphics packages failed to install"
-    fi
-    
-    success "Graphics drivers installed"
-}
-
-# Install custom packages
-install_custom_packages() {
-    section_header "System • Custom Packages"
-    if [ -f /root/packages.x86_64 ]; then
-        log "Installing custom packages from /root/packages.x86_64..."
-        mapfile -t custom_packages < <(grep -v '^#' /root/packages.x86_64 | grep -v '^\s*$')
-        
-        if [ ${#custom_packages[@]} -gt 0 ]; then
-            for pkg in "${custom_packages[@]}"; do
-                info "Installing custom package: $pkg"
-                if ! pacstrap /mnt "$pkg" 2>/dev/null; then
-                    warning "Failed to install custom package: $pkg"
-                fi
-            done
-            success "Custom packages installation completed"
-        else
-            warning "No valid packages found in /root/packages.x86_64"
-        fi
-    else
-        info "No custom packages file found, skipping"
-    fi
-}
+# [Moved to packages.sh] install_base_system
+# [Moved to packages.sh] install_bootloader_packages
+# [Moved to packages.sh] install_graphics_drivers
+# [Moved to packages.sh] install_custom_packages
 
 # Copy custom repository
 copy_custom_repo() {
