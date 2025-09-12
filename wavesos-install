@@ -115,6 +115,59 @@ source "$SCRIPT_DIR/packages.sh"
 source "$SCRIPT_DIR/desktop.sh"
 source "$SCRIPT_DIR/bootloader.sh"
 
+# Enhanced error handling for live boot environments (after utils.sh is sourced)
+handle_error() {
+    local exit_code=$?
+    local line_number=$1
+    local bash_lineno=$2
+    local last_command=$3
+    local funcstack=("${FUNCNAME[@]}")
+    
+    echo -e "\n${NEON_PINK:-\033[38;5;213m}${BOLD:-\033[1m}═══════════════════════════════════════════════════════════════════${NC:-\033[0m}"
+    echo -e "${NEON_PINK:-\033[38;5;213m}${BOLD:-\033[1m}⚠️  INSTALLATION ERROR DETECTED${NC:-\033[0m}"
+    echo -e "${NEON_PINK:-\033[38;5;213m}${BOLD:-\033[1m}═══════════════════════════════════════════════════════════════════${NC:-\033[0m}"
+    echo -e "${NEON_RED:-\033[38;5;196m}Exit Code:${NC:-\033[0m} $exit_code"
+    echo -e "${NEON_RED:-\033[38;5;196m}Line Number:${NC:-\033[0m} $line_number"
+    echo -e "${NEON_RED:-\033[38;5;196m}Command:${NC:-\033[0m} $last_command"
+    echo -e "${NEON_RED:-\033[38;5;196m}Function Stack:${NC:-\033[0m} ${funcstack[*]}"
+    echo -e "${NEON_RED:-\033[38;5;196m}Current Step:${NC:-\033[0m} ${CURRENT_STEP:-unknown}/${TOTAL_STEPS:-unknown}"
+    echo -e "${NEON_PINK:-\033[38;5;213m}${BOLD:-\033[1m}═══════════════════════════════════════════════════════════════════${NC:-\033[0m}"
+    
+    # Try to save debug information
+    echo -e "${NEON_CYAN:-\033[38;5;51m}Saving debug information...${NC:-\033[0m}"
+    {
+        echo "WavesOS Installation Error Report"
+        echo "Generated: $(date)"
+        echo "Exit Code: $exit_code"
+        echo "Line: $line_number"
+        echo "Command: $last_command"
+        echo "Function Stack: ${funcstack[*]}"
+        echo "Step: ${CURRENT_STEP:-unknown}/${TOTAL_STEPS:-unknown}"
+        echo "Terminal: ${TERM:-unknown}"
+        echo "TTY: $([ -t 0 ] && echo "yes" || echo "no")"
+        echo "Selected DE: ${SELECTED_DE:-none}"
+        echo "System Disk: ${SYS_DISK:-none}"
+        echo ""
+        echo "Environment Variables:"
+        env | grep -E "(TERM|TTY|DISPLAY|SSH)" || true
+        echo ""
+        echo "Process Tree:"
+        ps aux | head -20 || true
+    } > /tmp/wavesos_error_report.txt 2>/dev/null || true
+    
+    echo -e "${NEON_CYAN:-\033[38;5;51m}Debug report saved to: /tmp/wavesos_error_report.txt${NC:-\033[0m}"
+    echo -e "${NEON_ORANGE:-\033[38;5;208m}Please share this information when reporting the issue.${NC:-\033[0m}"
+    
+    # Cleanup and restore terminal
+    if command -v restore_terminal_ui >/dev/null 2>&1; then
+        restore_terminal_ui
+    fi
+    exit $exit_code
+}
+
+# Set up error trap
+trap 'handle_error $? $LINENO $BASH_LINENO "$BASH_COMMAND"' ERR
+
 # Main installation function with enhanced UI
 main() {
     # Initialize futuristic UI
@@ -145,6 +198,8 @@ main() {
     next_step
     select_disks
     next_step
+    select_desktop_environment
+    next_step
     detect_boot_mode
     next_step
     configure_partitions
@@ -171,7 +226,7 @@ main() {
     next_step
     install_desktop_environment
     next_step
-    install_custom_packages
+    install_comprehensive_packages
     next_step
     copy_custom_repo
     next_step
@@ -189,15 +244,11 @@ main() {
     next_step
     install_SDDM_theme
     next_step
-    install_gnome_extensions
+    configure_desktop_services
     next_step
     setup_kando_autostart
     next_step
-    set_burn_tvglitch_chroot
-    next_step
-    configure_os_release
-    next_step
-    set_default_WavesOS_theme
+    apply_desktop_final_config
 
     # Final steps
     next_step

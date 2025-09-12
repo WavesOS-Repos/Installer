@@ -1,13 +1,57 @@
-
 #!/bin/bash
 
 # WavesOS Installation Script - Desktop Environment Library
 # Contains desktop installation and WavesOS customizations
 
+# Global variable for selected desktop environment
+SELECTED_DE=""
+
+# Desktop Environment Selection Menu
+select_desktop_environment() {
+    section_header "Desktop • Environment Selection"
+    
+    log "Presenting desktop environment options..."
+    
+    local de_options=(
+        "Hyprland (Wayland - Modern/Gaming)"
+        "GNOME (X11/Wayland - User-friendly)"
+        "Both (Hybrid setup)"
+    )
+    
+    # Debug information for live boot troubleshooting
+    log "Terminal type: ${TERM:-unknown}"
+    log "TTY check: $([ -t 0 ] && echo "stdin is tty" || echo "stdin not tty")"
+    log "STTY available: $(command -v stty >/dev/null 2>&1 && echo "yes" || echo "no")"
+    
+    log "Calling select_option function..."
+    local selection_result
+    selection_result=$(select_option "Choose your desktop environment:" "${de_options[@]}")
+    
+    log "Selection result: $selection_result"
+    
+    # Validate selection result is a valid integer
+    if ! [[ "$selection_result" =~ ^[0-9]+$ ]] || [ "$selection_result" -lt 0 ] || [ "$selection_result" -gt 2 ]; then
+        error "Invalid selection result: '$selection_result'. Expected 0, 1, or 2."
+    fi
+    
+    case $selection_result in
+        0) SELECTED_DE="hyprland" ;;
+        1) SELECTED_DE="gnome" ;;
+        2) SELECTED_DE="both" ;;
+        *) 
+            error "Invalid desktop environment selection result: $selection_result"
+            ;;
+    esac
+    
+    log "Desktop environment set to: $SELECTED_DE"
+    success "Selected desktop environment: $SELECTED_DE"
+    echo
+}
+
 # [Moved to packages.sh] install_desktop_environment
 
 # Install and configure Hyprland configs
-install_wavesos_customizations() {
+install_hyprland_customizations() {
     section_header "Desktop • WavesOS Customizations"
     log "Installing WavesOS customizations..."
 
@@ -67,7 +111,83 @@ install_wavesos_customizations() {
         success "WavesOS Hyprland customizations installed successfully"
 }
 
-# Install WavesSDDM
+# Install and configure GNOME customizations
+install_gnome_customizations() {
+    section_header "Desktop • GNOME Customizations"
+    log "Installing WavesOS GNOME customizations..."
+
+    # Verify /mnt is mounted
+    if ! mountpoint -q /mnt; then
+        error "Root partition /mnt is not mounted"
+    fi
+
+    show_progress 1 5 "Configuring GNOME Shell..."
+    arch-chroot /mnt su - "$USERNAME" -c "
+        # Enable extensions
+        dbus-launch gsettings set org.gnome.shell enabled-extensions \"['blur-my-shell@aunetx', 'burn-my-windows@schneegans.github.com', 'desktop-cube@schneegans.github.com']\"
+        
+        # Set icon theme
+        dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'kora-pgrey'
+        
+        # Set wallpaper
+        dbus-launch gsettings set org.gnome.desktop.background picture-uri 'file:///usr/share/pixmaps/wavesos-wallpaper.jpg'
+        dbus-launch gsettings set org.gnome.desktop.background picture-uri-dark 'file:///usr/share/pixmaps/wavesos-wallpaper.jpg'
+        
+        # Configure interface
+        dbus-launch gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+        dbus-launch gsettings set org.gnome.desktop.interface cursor-theme 'Adwaita'
+        
+        # Configure window manager
+        dbus-launch gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
+        
+        echo 'GNOME customizations applied successfully'
+    " || error "Failed to apply GNOME customizations"
+
+    show_progress 3 5 "Setting up GNOME autostart applications..."
+    arch-chroot /mnt su - "$USERNAME" -c "
+        mkdir -p ~/.config/autostart
+        
+        # Create autostart for kando if installed
+        if command -v kando >/dev/null 2>&1; then
+            cat > ~/.config/autostart/kando.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=Kando
+Exec=kando
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+        fi
+        
+        echo 'GNOME autostart configured successfully'
+    " || error "Failed to configure GNOME autostart"
+
+    success "WavesOS GNOME customizations installed successfully"
+}
+
+# Install and configure WavesOS customizations based on selected DE
+install_wavesos_customizations() {
+    case "$SELECTED_DE" in
+        "hyprland")
+            install_hyprland_customizations
+            ;;
+        "gnome")
+            install_gnome_customizations
+            install_gnome_extensions
+            ;;
+        "both")
+            install_hyprland_customizations
+            install_gnome_customizations
+            install_gnome_extensions
+            ;;
+        *)
+            warning "Unknown desktop environment: $SELECTED_DE. Skipping customizations."
+            ;;
+    esac
+}
+
+# Install WavesSDDM (Universal for all DEs)
 install_SDDM_theme() {
     section_header "Desktop • SDDM Theme"
     log "Installing WavesOS SDDM..."
@@ -80,19 +200,116 @@ install_SDDM_theme() {
     show_progress 2 5 "Copying WavesSDDM Theme..."
     # Copy SDDM configs to chroot
     if [ -d /root/WavesSDDM ]; then
-        cp -r /root/WavesSDDM /mnt/ || error "Failed to copy WavesSDDM to /mnt/"
+        cp -r /root/WavesSDDM /mnt/root/ || error "Failed to copy WavesSDDM to /mnt/root/"
     else
-        error "WavesSDDM directory not found at /mnt"
+        # Check if we're in demo mode (DEMO_MODE should be set by demo script)
+        if [ "${DEMO_MODE:-false}" = "true" ]; then
+            warning "WavesSDDM directory not found at /root, creating demo placeholder..."
+            mkdir -p /mnt/root/WavesSDDM
+            echo "#!/bin/bash" > /mnt/root/WavesSDDM/install.sh
+            echo "echo 'Demo mode - SDDM theme would be installed here'" >> /mnt/root/WavesSDDM/install.sh
+            echo "mkdir -p /usr/share/sddm/themes/waves" >> /mnt/root/WavesSDDM/install.sh
+            echo "echo 'Demo theme created' > /usr/share/sddm/themes/waves/theme.conf" >> /mnt/root/WavesSDDM/install.sh
+            chmod +x /mnt/root/WavesSDDM/install.sh
+        else
+            error "WavesSDDM theme directory not found at /root/WavesSDDM. Theme installation cannot proceed."
+        fi
     fi
   
-       show_progress 4 5 "Setting up configurations..."
-    # Set permissions and run install.sh in chroot
+    show_progress 4 5 "Setting up configurations..."
+    # Set permissions and run install.sh in chroot with proper error handling
     arch-chroot /mnt bash -c "
-        [ -f WavesSDDM/install.sh ] 
-        chmod +x WavesSDDM/install.sh 
-        WavesSDDM//install.sh || echo 'WavesSDDM  install.sh not found or failed' >&2
-        " || error "Failed to execute install.sh script in chroot"
-        success "WavesOS SDDM Theme installed successfully"
+        set -e
+        if [ -f /root/WavesSDDM/install.sh ]; then
+            chmod +x /root/WavesSDDM/install.sh 
+            /root/WavesSDDM/install.sh
+            echo 'WavesSDDM theme installation completed successfully'
+        else
+            echo 'ERROR: WavesSDDM install.sh not found at /root/WavesSDDM/install.sh' >&2
+            exit 1
+        fi
+        " || error "Failed to execute SDDM theme install script in chroot"
+        
+    # Explicitly configure SDDM theme
+    show_progress 5 5 "Configuring SDDM theme settings..."
+    arch-chroot /mnt bash -c "
+        mkdir -p /etc/sddm.conf.d
+        cat > /etc/sddm.conf.d/waves.conf << 'EOF'
+[Theme]
+Current=waves
+
+[General]
+Numlock=on
+
+[Users]
+MaximumUid=60513
+MinimumUid=500
+EOF
+    " || error "Failed to configure SDDM theme settings"
+    
+    success "WavesOS SDDM Theme installed successfully"
+}
+
+# Configure desktop environment specific services
+configure_desktop_services() {
+    section_header "Desktop • Service Configuration"
+    log "Configuring desktop services for $SELECTED_DE..."
+
+    show_progress 1 4 "Enabling SDDM display manager..."
+    # Enable SDDM for all desktop environments with error checking
+    if ! arch-chroot /mnt systemctl enable sddm; then
+        error "Failed to enable SDDM service. Ensure sddm package is installed."
+    fi
+    
+    show_progress 2 4 "Disabling conflicting display managers..."
+    case "$SELECTED_DE" in
+        "hyprland")
+            log "Configuring SDDM for Hyprland (Wayland)"
+            # Ensure no conflicting display managers
+            arch-chroot /mnt systemctl disable gdm lightdm 2>/dev/null || true
+            ;;
+        "gnome")
+            log "Configuring SDDM for GNOME (replacing GDM)"
+            # Disable GDM and other display managers
+            arch-chroot /mnt systemctl disable gdm lightdm 2>/dev/null || true
+            # Ensure GDM doesn't auto-start
+            arch-chroot /mnt systemctl mask gdm 2>/dev/null || true
+            ;;
+        "both")
+            log "Configuring SDDM for hybrid Hyprland/GNOME setup"
+            arch-chroot /mnt systemctl disable gdm lightdm 2>/dev/null || true
+            arch-chroot /mnt systemctl mask gdm 2>/dev/null || true
+            ;;
+    esac
+    
+    show_progress 3 4 "Setting SDDM as default display manager..."
+    # Explicitly set SDDM as the default display manager
+    arch-chroot /mnt bash -c "
+        mkdir -p /etc/systemd/system/display-manager.service.d
+        cat > /etc/systemd/system/display-manager.service.d/override.conf << 'EOF'
+[Service]
+ExecStart=
+ExecStart=/usr/bin/sddm
+EOF
+    " || warning "Failed to set SDDM as default display manager"
+    
+    show_progress 4 4 "Verifying SDDM configuration..."
+    # Set default target to graphical
+    arch-chroot /mnt systemctl set-default graphical.target || warning "Failed to set graphical target"
+    
+    # Verify SDDM is properly enabled and is the default display manager
+    if arch-chroot /mnt systemctl is-enabled sddm | grep -q "enabled"; then
+        # Verify display-manager service points to SDDM
+        if arch-chroot /mnt systemctl status display-manager 2>/dev/null | grep -q "sddm\|Active"; then
+            success "SDDM successfully configured as default display manager for $SELECTED_DE"
+        else
+            warning "SDDM enabled but may not be the active display manager"
+        fi
+    else
+        error "SDDM service verification failed - service not enabled"
+    fi
+    
+    success "Desktop services configured for $SELECTED_DE"
 }
 
 install_gnome_extensions() {
@@ -190,6 +407,26 @@ EOF
     " || error "Failed to configure kando-bin autostart"
 
     success "kando-bin autostart configured successfully for $USERNAME"
+}
+
+# Apply desktop environment specific final configurations
+apply_desktop_final_config() {
+    case "$SELECTED_DE" in
+        "hyprland")
+            set_burn_tvglitch_chroot
+            configure_os_release
+            set_default_WavesOS_theme
+            ;;
+        "gnome")
+            # GNOME-specific final configurations
+            configure_os_release
+            ;;
+        "both")
+            set_burn_tvglitch_chroot
+            configure_os_release
+            set_default_WavesOS_theme
+            ;;
+    esac
 }
 
 set_burn_tvglitch_chroot() {
