@@ -252,140 +252,52 @@ EOF
     echo
 }
 
-# Futuristic selection menu with live boot compatibility
+# Futuristic selection menu
 select_option() {
     local prompt="$1"
     local options=("${@:2}")
     local selected=0
     local count=${#options[@]}
     
-    echo -e "${NEON_PURPLE}${BOLD}$prompt${NC}" >&2
-    echo >&2
+    echo -e "${NEON_PURPLE}${BOLD}$prompt${NC}"
+    echo
     
-    # Check if we can use interactive mode (test terminal capabilities)
-    if ! [[ -t 0 ]] || ! command -v stty >/dev/null 2>&1; then
-        warning "Interactive terminal not available, using fallback menu" >&2
-        select_option_fallback "$prompt" "${options[@]}"
-        return $?
-    fi
-    
-    # Test if we can read from terminal properly
-    local old_stty_cfg
-    if ! old_stty_cfg=$(stty -g 2>/dev/null); then
-        warning "Terminal control not available, using fallback menu" >&2
-        select_option_fallback "$prompt" "${options[@]}"
-        return $?
-    fi
-    
-    # Set up terminal for interactive mode
-    stty raw -echo 2>/dev/null || {
-        warning "Cannot configure terminal, using fallback menu" >&2
-        select_option_fallback "$prompt" "${options[@]}"
-        return $?
-    }
-    
-    local menu_active=true
-    while $menu_active; do
+    while true; do
         # Clear previous menu
         for ((i=0; i<count+2; i++)); do
-            echo -en "\033[A\033[K" >&2
+            echo -en "\033[A\033[K"
         done
         
         # Show current selection
         for ((i=0; i<count; i++)); do
             if [ $i -eq $selected ]; then
-                echo -e "${NEON_CYAN}${BOLD}  ▶ ${NEON_GREEN}${options[$i]}${NC}" >&2
+                echo -e "${NEON_CYAN}${BOLD}  ▶ ${NEON_GREEN}${options[$i]}${NC}"
             else
-                echo -e "${DARK_GRAY}    ${options[$i]}${NC}" >&2
+                echo -e "${DARK_GRAY}    ${options[$i]}${NC}"
             fi
         done
         
-        # Read key with timeout and error handling
-        local key
-        if ! key=$(timeout 30 dd bs=1 count=1 2>/dev/null); then
-            warning "Input timeout or error, using fallback menu" >&2
-            stty "$old_stty_cfg" 2>/dev/null
-            select_option_fallback "$prompt" "${options[@]}"
-            return $?
-        fi
-        
+        # Read key
+        read -rsn1 key
         case "$key" in
-            $'\x1b') # Escape sequence
-                local key2 key3
-                if key2=$(timeout 1 dd bs=1 count=1 2>/dev/null) && key3=$(timeout 1 dd bs=1 count=1 2>/dev/null); then
-                    case "$key2$key3" in
-                        "[A") # Up arrow
-                            selected=$((selected - 1))
-                            [ $selected -lt 0 ] && selected=$((count - 1))
-                            ;;
-                        "[B") # Down arrow
-                            selected=$((selected + 1))
-                            [ $selected -ge $count ] && selected=0
-                            ;;
-                    esac
-                fi
+            $'\x1b')
+                read -rsn2 key
+                case "$key" in
+                    "[A") # Up arrow
+                        selected=$((selected - 1))
+                        [ $selected -lt 0 ] && selected=$((count - 1))
+                        ;;
+                    "[B") # Down arrow
+                        selected=$((selected + 1))
+                        [ $selected -ge $count ] && selected=0
+                        ;;
+                esac
                 ;;
-            $'\n'|$'\r') # Enter
-                stty "$old_stty_cfg" 2>/dev/null
-                echo >&2
-                echo "$selected"
-                return 0
-                ;;
-            $'\x03') # Ctrl+C
-                stty "$old_stty_cfg" 2>/dev/null
-                echo >&2
-                error "Installation cancelled by user"
-                ;;
-            [1-9]) # Number keys for quick selection
-                local num=$(($(printf '%d' "'$key") - 49)) # Convert to 0-based index
-                if [ $num -ge 0 ] && [ $num -lt $count ]; then
-                    selected=$num
-                    stty "$old_stty_cfg" 2>/dev/null
-                    echo >&2
-                    echo -e "${NEON_GREEN}Selected: ${options[$selected]}${NC}" >&2
-                    echo "$selected"
-                    return 0
-                fi
+            "") # Enter
+                echo
+                return $selected
                 ;;
         esac
-    done
-    
-    # Restore terminal settings
-    stty "$old_stty_cfg" 2>/dev/null
-}
-
-# Fallback selection menu for environments where interactive mode fails
-select_option_fallback() {
-    local prompt="$1"
-    local options=("${@:2}")
-    local count=${#options[@]}
-    
-    echo -e "${NEON_ORANGE}${BOLD}Using fallback selection mode${NC}" >&2
-    echo -e "${NEON_PURPLE}${BOLD}$prompt${NC}" >&2
-    echo >&2
-    
-    # Display numbered options
-    for ((i=0; i<count; i++)); do
-        echo -e "${NEON_CYAN}${BOLD}$(($i + 1)).${NC} ${options[$i]}" >&2
-    done
-    echo >&2
-    
-    local choice
-    while true; do
-        echo -en "${NEON_GREEN}${BOLD}Enter your choice (1-$count): ${NC}" >&2
-        if read -r choice; then
-            # Validate input
-            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$count" ]; then
-                echo -e "${NEON_GREEN}Selected: ${options[$((choice - 1))]}${NC}" >&2
-                echo "$((choice - 1))"
-                return 0
-            else
-                echo -e "${NEON_RED}Invalid choice. Please enter a number between 1 and $count.${NC}" >&2
-            fi
-        else
-            # Handle read failure gracefully
-            echo -e "${NEON_RED}Input error. Please try again.${NC}" >&2
-        fi
     done
 }
 
