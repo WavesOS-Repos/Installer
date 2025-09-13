@@ -1,91 +1,121 @@
-
 #!/bin/bash
 
 # WavesOS Installation Script - Desktop Environment Library
 # Contains desktop installation and WavesOS customizations
 
-# Install WavesOS desktop environment
-install_desktop_environment() {
-    section_header "Desktop • Environment"
-    log "Installing WavesOS desktop environment..."
+# Global variable for selected desktop environment
+SELECTED_DE=""
+
+# Desktop Environment Selection Menu
+select_desktop_environment() {
+    section_header "Desktop • Environment Selection"
+    log "Choose your desktop environment for WavesOS..."
+    echo
     
-    local de_packages=(
-        # Hyprland and Wayland
-        hyprland waybar wofi dunst
-        xorg-xwayland qt5-wayland qt6-wayland
-        
-        # Audio
-        pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber
-        
-        # File manager and utilities
-        thunar thunar-volman gvfs tumbler
-        
-        # Applications
-        firefox alacritty kitty
-        
-        # Display manager
-        sddm
-        
-        # Fonts
-        ttf-dejavu ttf-liberation noto-fonts noto-fonts-emoji
-        ttf-fira-code ttf-opensans
-        
-        # System utilities
-        polkit-gnome
-        brightnessctl playerctl
-        grim slurp wl-clipboard
-        network-manager-applet
-        pavucontrol
-        
-        # Additional Hyprland ecosystem
-        hypridle hyprlock hyprpaper
-        xdg-desktop-portal-hyprland
-        
-        # Theme and customization
-        gtk3 gtk4
-        qt5ct qt6ct
-        
-        # System monitoring and utilities
-        htop neofetch
-        zip unzip p7zip
-        
-        # Development tools
-        code python python-pip nodejs npm
+    local de_options=(
+        "Hyprland (Modern Wayland - Gaming/Power Users)"
+        "GNOME (Traditional Desktop - User-friendly)"
+        "Both (Complete Setup - All Features)"
     )
     
-    info "Installing ${#de_packages[@]} desktop environment packages..."
+    echo -e "${NEON_PURPLE}${BOLD}Available Desktop Environments:${NC}"
+    echo -e "${DARK_GRAY}┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐${NC}"
     
-    for i in "${!de_packages[@]}"; do
-        local current=$((i + 1))
-        show_progress "$current" "${#de_packages[@]}" "Installing ${de_packages[$i]}..."
-        
-        if ! pacstrap /mnt "${de_packages[$i]}" 2>/dev/null; then
-            warning "Failed to install ${de_packages[$i]}, continuing..."
-        fi
+    for i in "${!de_options[@]}"; do
+        printf "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}%d)${NC} ${SILVER}%-95s${NC} ${DARK_GRAY}│${NC}\n" "$((i+1))" "${de_options[$i]}"
     done
     
-    success "Desktop environment installation completed"
+    echo -e "${DARK_GRAY}└─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘${NC}"
+    echo
+    
+    # Get user selection
+    while true; do
+        echo -e "${NEON_ORANGE}${BOLD}Select desktop environment (1-3):${NC} "
+        read -r CHOICE
+        
+        case $CHOICE in
+            1)
+                SELECTED_DE="hyprland"
+                break
+                ;;
+            2)
+                SELECTED_DE="gnome"
+                break
+                ;;
+            3)
+                SELECTED_DE="both"
+                break
+                ;;
+            *)
+                echo -e "${NEON_PINK}${BOLD}Invalid selection. Please enter 1, 2, or 3.${NC}"
+                ;;
+        esac
+    done
+    
+    # Confirm selection
+    echo
+    case $SELECTED_DE in
+        "hyprland")
+            info "Selected: Hyprland (Modern Wayland desktop for gaming and power users)"
+            ;;
+        "gnome")
+            info "Selected: GNOME (Full-featured traditional desktop environment)"
+            ;;
+        "both")
+            info "Selected: Both environments (Complete WavesOS experience with all features)"
+            ;;
+    esac
+    
+    if confirm_action "Confirm this selection?"; then
+        success "Desktop environment confirmed: $SELECTED_DE"
+    else
+        error "Installation cancelled by user"
+    fi
+    
+    echo
 }
 
 # Install and configure Hyprland configs
 install_wavesos_customizations() {
     section_header "Desktop • WavesOS Customizations"
-    log "Installing WavesOS customizations..."
+    log "Installing WavesOS customizations for $SELECTED_DE..."
 
     # Verify /mnt is mounted
     if ! mountpoint -q /mnt; then
         error "Root partition /mnt is not mounted"
     fi
 
+    # Install customizations based on selected desktop environment
+    case "$SELECTED_DE" in
+        "hyprland")
+            install_hyprland_customizations
+            ;;
+        "gnome")
+            install_gnome_customizations
+            ;;
+        "both")
+            install_hyprland_customizations
+            install_gnome_customizations
+            ;;
+        *)
+            warning "Unknown desktop environment: $SELECTED_DE. Skipping customizations."
+            ;;
+    esac
+}
+
+# Install Hyprland specific customizations
+install_hyprland_customizations() {
+    log "Installing Hyprland customizations..."
+    
     show_progress 1 5 "Copying Hyprland configurations..."
     # Copy Hyprland configs to chroot
     if [ -d /root/Hyprland-configs ]; then
-        cp -r /root/Hyprland-configs /mnt || error "Failed to copy Hyprland-configs to /mnt/tmp/Hyprland-configs"
+        cp -r /root/Hyprland-configs /mnt || error "Failed to copy Hyprland-configs to /mnt/Hyprland-configs"
     else
         error "Hyprland-configs directory not found at /root/Hyprland-configs"
     fi
 
-    # Copy Hyprland configs to chroot
+    # Copy WavesHyprland configs to chroot
     if [ -d /root/WavesHyprland ]; then
         cp -r /root/WavesHyprland /mnt || error "Failed to copy WavesHyprland to /mnt/WavesHyprland"
     else
@@ -93,9 +123,9 @@ install_wavesos_customizations() {
     fi
 
     if [ -d /root/WavesHyprland-V2 ]; then
-        cp -r /root/WavesHyprland-V2 /mnt || error "Failed to copy WavesHyprland to /mnt/WavesHyprland"
+        cp -r /root/WavesHyprland-V2 /mnt || error "Failed to copy WavesHyprland-V2 to /mnt/WavesHyprland-V2"
     else
-        error "WavesHyprland directory not found at /root/WavesHyprland"
+        error "WavesHyprland-V2 directory not found at /root/WavesHyprland-V2"
     fi
 
     show_progress 3 5 "Copying sleep.conf..."
@@ -106,32 +136,55 @@ install_wavesos_customizations() {
         warning "No sleep.conf found at /etc/systemd/sleep.conf; skipping"
     fi
 
-    show_progress 4 5 "Setting up configurations..."
+    show_progress 4 5 "Setting up Hyprland configurations..."
     # Set permissions and run install.sh in chroot
-  arch-chroot /mnt bash -c "
+    arch-chroot /mnt bash -c "
         if [ -f /Hyprland-configs/install.sh ]; then
             chmod +x /Hyprland-configs/install.sh || { echo 'Failed to make Hyprland install.sh executable' >&2; exit 1; }
-           chown -R $USERNAME:$USERNAME Hyprland-configs
-           chmod +x /Hyprland-configs/dnf-scripts/*.sh
-           chmod +x /Hyprland-configs/zypper-scripts/*.sh
-           chmod +x /Hyprland-configs/common/*.sh
-           chmod +x /Hyprland-configs/pacman-scripts/*.sh
-           chmod +x /Hyprland-configs/start.sh
-            su - \"$USERNAME\" -c 'cd /Hyprland-configs 
-            ./install.sh' || { echo 'Hyprland install.sh failed' >&2; exit 1; }
+            chown -R $USERNAME:$USERNAME Hyprland-configs
+            chmod +x /Hyprland-configs/dnf-scripts/*.sh 2>/dev/null || true
+            chmod +x /Hyprland-configs/zypper-scripts/*.sh 2>/dev/null || true
+            chmod +x /Hyprland-configs/common/*.sh 2>/dev/null || true
+            chmod +x /Hyprland-configs/pacman-scripts/*.sh 2>/dev/null || true
+            chmod +x /Hyprland-configs/start.sh 2>/dev/null || true
+            su - \"$USERNAME\" -c 'cd /Hyprland-configs && ./install.sh' || { echo 'Hyprland install.sh failed' >&2; exit 1; }
         else
             echo 'Hyprland install.sh not found' >&2
             exit 1
         fi
-        " || error "Failed to execute install.sh Hyprland script in chroot"
+    " || error "Failed to execute install.sh Hyprland script in chroot"
 
-        success "WavesOS Hyprland customizations installed successfully"
+    success "Hyprland customizations installed successfully"
 }
 
-# Install WavesSDDM
+# Install GNOME specific customizations
+install_gnome_customizations() {
+    log "Installing GNOME customizations..."
+    
+    show_progress 1 3 "Configuring GNOME settings..."
+    arch-chroot /mnt su - "$USERNAME" -c "
+        # Set icon theme
+        dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Adwaita'
+        
+        # Set GTK theme
+        dbus-launch gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+        
+        # Set cursor theme
+        dbus-launch gsettings set org.gnome.desktop.interface cursor-theme 'Adwaita'
+        
+        # Configure window manager
+        dbus-launch gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
+        
+        echo 'GNOME basic customizations applied successfully'
+    " || warning "Some GNOME customizations failed"
+    
+    success "GNOME customizations installed successfully"
+}
+
+# Install WavesSDDM theme (compulsory for all desktop environments)
 install_SDDM_theme() {
     section_header "Desktop • SDDM Theme"
-    log "Installing WavesOS SDDM..."
+    log "Installing WavesOS SDDM theme (compulsory)..."
 
     # Verify /mnt is mounted
     if ! mountpoint -q /mnt; then
@@ -143,19 +196,25 @@ install_SDDM_theme() {
     if [ -d /root/WavesSDDM ]; then
         cp -r /root/WavesSDDM /mnt/ || error "Failed to copy WavesSDDM to /mnt/"
     else
-        error "WavesSDDM directory not found at /mnt"
+        error "WavesSDDM directory not found at /root/WavesSDDM"
     fi
   
-       show_progress 4 5 "Setting up configurations..."
+    show_progress 4 5 "Setting up SDDM configurations..."
     # Set permissions and run install.sh in chroot
     arch-chroot /mnt bash -c "
-        [ -f WavesSDDM/install.sh ] 
-        chmod +x WavesSDDM/install.sh 
-        WavesSDDM//install.sh || echo 'WavesSDDM  install.sh not found or failed' >&2
-        " || error "Failed to execute install.sh script in chroot"
-        success "WavesOS SDDM Theme installed successfully"
+        if [ -f /WavesSDDM/install.sh ]; then
+            chmod +x /WavesSDDM/install.sh 
+            /WavesSDDM/install.sh || { echo 'WavesSDDM install.sh failed' >&2; exit 1; }
+        else
+            echo 'WavesSDDM install.sh not found' >&2
+            exit 1
+        fi
+    " || error "Failed to execute SDDM install.sh script in chroot"
+    
+    success "WavesOS SDDM Theme installed successfully"
 }
 
+# Install GNOME extensions (only for GNOME or both)
 install_gnome_extensions() {
     section_header "Desktop • GNOME Extensions"
     log "Installing GNOME Shell extensions for $USERNAME..."
@@ -163,6 +222,12 @@ install_gnome_extensions() {
     # Verify /mnt is mounted
     if ! mountpoint -q /mnt; then
         error "Root partition /mnt is not mounted"
+    fi
+
+    # Only install if GNOME is selected
+    if [[ "$SELECTED_DE" != "gnome" && "$SELECTED_DE" != "both" ]]; then
+        info "Skipping GNOME extensions (not selected)"
+        return
     fi
 
     # Ensure gnome-shell-extensions directory exists in live environment
@@ -221,6 +286,7 @@ install_gnome_extensions() {
     success "GNOME Shell extensions installed and enabled successfully for $USERNAME"
 }
 
+# Setup Kando autostart
 setup_kando_autostart() {
     section_header "Desktop • Kando Autostart"
     log "Setting up kando-bin autostart for $USERNAME..."
@@ -253,9 +319,16 @@ EOF
     success "kando-bin autostart configured successfully for $USERNAME"
 }
 
+# Set TV-Glitch effect (only for environments that support it)
 set_burn_tvglitch_chroot() {
     section_header "Desktop • TV-Glitch"
     log "Setting Burn My Windows TV-Glitch effect for $USERNAME..."
+
+    # Only configure if GNOME-related environments are selected
+    if [[ "$SELECTED_DE" != "gnome" && "$SELECTED_DE" != "both" ]]; then
+        info "Skipping TV-Glitch effect (GNOME not selected)"
+        return
+    fi
 
     # Verify /mnt is mounted
     if ! mountpoint -q /mnt; then
@@ -318,6 +391,7 @@ BMWS_EOF
     success "TV-Glitch effect configured successfully for $USERNAME"
 }
 
+# Set default WavesOS theme
 set_default_WavesOS_theme() {
     section_header "Desktop • Default Theme"
     log "Setting WavesOS theme for $USERNAME..."
@@ -329,7 +403,8 @@ set_default_WavesOS_theme() {
 
     # Check if kora-pgrey icon theme is installed
     if ! [ -d /mnt/usr/share/icons/kora-pgrey ]; then
-        error "kora-pgrey icon theme not found in /mnt/usr/share/icons"
+        warning "kora-pgrey icon theme not found in /mnt/usr/share/icons, using default theme"
+        return
     fi
 
     show_progress 1 1 "Configuring WavesOS theme..."

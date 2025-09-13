@@ -111,6 +111,7 @@ source "$SCRIPT_DIR/utils.sh"
 source "$SCRIPT_DIR/hardware.sh"
 source "$SCRIPT_DIR/partitioning.sh"
 source "$SCRIPT_DIR/system.sh"
+source "$SCRIPT_DIR/packages.sh"
 source "$SCRIPT_DIR/desktop.sh"
 source "$SCRIPT_DIR/bootloader.sh"
 
@@ -122,7 +123,7 @@ main() {
     show_banner
     
     # Initialize step counter for the entire installation process
-    init_steps 25  # Total number of major steps
+    init_steps 26  # Total number of major steps (added desktop environment selection)
     
     # Pre-installation checks
     next_step
@@ -145,6 +146,8 @@ main() {
     select_disks
     next_step
     detect_boot_mode
+    next_step
+    select_desktop_environment
     next_step
     configure_partitions
     next_step
