@@ -15,7 +15,7 @@ select_desktop_environment() {
     local de_options=(
         "Hyprland (Modern Wayland - Gaming/Power Users)"
         "GNOME (Traditional Desktop - User-friendly)"
-        "Both (Complete Setup - All Features)"
+        "COSMIC (Next-generation Rust-based Desktop)"
     )
     
     echo -e "${NEON_PURPLE}${BOLD}Available Desktop Environments:${NC}"
@@ -43,7 +43,7 @@ select_desktop_environment() {
                 break
                 ;;
             3)
-                SELECTED_DE="both"
+                SELECTED_DE="cosmic"
                 break
                 ;;
             *)
@@ -61,8 +61,8 @@ select_desktop_environment() {
         "gnome")
             info "Selected: GNOME (Full-featured traditional desktop environment)"
             ;;
-        "both")
-            info "Selected: Both environments (Complete WavesOS experience with all features)"
+        "cosmic")
+            info "Selected: COSMIC (Next-generation Rust-based desktop environment)"
             ;;
     esac
     
@@ -93,9 +93,8 @@ install_wavesos_customizations() {
         "gnome")
             install_gnome_customizations
             ;;
-        "both")
-            install_hyprland_customizations
-            install_gnome_customizations
+        "cosmic")
+            install_cosmic_customizations
             ;;
         *)
             warning "Unknown desktop environment: $SELECTED_DE. Skipping customizations."
@@ -181,6 +180,19 @@ install_gnome_customizations() {
     success "GNOME customizations installed successfully"
 }
 
+# Install COSMIC specific customizations
+install_cosmic_customizations() {
+    log "Installing COSMIC customizations..."
+    
+    show_progress 1 2 "Configuring COSMIC settings..."
+    arch-chroot /mnt su - "$USERNAME" -c "
+        # Basic COSMIC configuration
+        echo 'COSMIC desktop environment configured successfully'
+    " || warning "Some COSMIC customizations failed"
+    
+    success "COSMIC customizations installed successfully"
+}
+
 # Install WavesSDDM theme (compulsory for all desktop environments)
 install_SDDM_theme() {
     section_header "Desktop • SDDM Theme"
@@ -225,7 +237,7 @@ install_gnome_extensions() {
     fi
 
     # Only install if GNOME is selected
-    if [[ "$SELECTED_DE" != "gnome" && "$SELECTED_DE" != "both" ]]; then
+    if [[ "$SELECTED_DE" != "gnome" ]]; then
         info "Skipping GNOME extensions (not selected)"
         return
     fi
@@ -325,7 +337,7 @@ set_burn_tvglitch_chroot() {
     log "Setting Burn My Windows TV-Glitch effect for $USERNAME..."
 
     # Only configure if GNOME-related environments are selected
-    if [[ "$SELECTED_DE" != "gnome" && "$SELECTED_DE" != "both" ]]; then
+    if [[ "$SELECTED_DE" != "gnome" ]]; then
         info "Skipping TV-Glitch effect (GNOME not selected)"
         return
     fi

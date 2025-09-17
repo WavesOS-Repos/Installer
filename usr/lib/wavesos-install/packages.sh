@@ -163,6 +163,30 @@ install_gnome_packages() {
     success "GNOME packages installation completed"
 }
 
+# Install COSMIC specific packages
+install_cosmic_packages() {
+    section_header "Desktop • COSMIC Packages"
+    log "Installing COSMIC desktop environment packages..."
+    
+    local cosmic_packages=(
+        # COSMIC desktop environment
+        cosmic
+    )
+    
+    info "Installing ${#cosmic_packages[@]} COSMIC packages..."
+    
+    for i in "${!cosmic_packages[@]}"; do
+        local current=$((i + 1))
+        show_progress "$current" "${#cosmic_packages[@]}" "Installing ${cosmic_packages[$i]}..."
+        
+        if ! pacstrap /mnt "${cosmic_packages[$i]}" 2>/dev/null; then
+            warning "Failed to install ${cosmic_packages[$i]}, continuing..."
+        fi
+    done
+    
+    success "COSMIC packages installation completed"
+}
+
 # Install WavesOS specific packages (compulsory for all installations)
 install_wavesos_packages() {
     section_header "System • WavesOS Packages"
@@ -273,9 +297,8 @@ install_desktop_environment() {
         "gnome")
             install_gnome_packages
             ;;
-        "both")
-            install_hyprland_packages
-            install_gnome_packages
+        "cosmic")
+            install_cosmic_packages
             ;;
         *)
             error "Invalid desktop environment selection: $SELECTED_DE"

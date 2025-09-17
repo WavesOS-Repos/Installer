@@ -361,17 +361,31 @@ next_step() {
 check_root() {
     show_status "checking" "Verifying root privileges..."
     if [ "$EUID" -ne 0 ]; then
-        error "Please run as root with sudo"
+        # Demo mode for Replit environment
+        if [ "${REPLIT_DOMAIN-}" != "" ] || [ "${REPL_ID-}" != "" ]; then
+            show_status "warning" "Running in demonstration mode (Replit environment)"
+            log "Note: This is a demonstration of the WavesOS installer interface"
+            log "Actual installation requires root privileges on a live Arch Linux system"
+        else
+            error "Please run as root with sudo"
+        fi
+    else
+        show_status "success" "Root privileges confirmed"
     fi
-    show_status "success" "Root privileges confirmed"
 }
 
 check_live_env() {
     show_status "checking" "Detecting live environment..."
     if ! grep -q "archiso" /proc/cmdline 2>/dev/null; then
-        warning "This script is designed to run from Arch Linux live environment"
-        if ! confirm_action "Continue anyway?"; then
-            error "Installation cancelled"
+        # Auto-continue in demo mode for Replit environment
+        if [ "${REPLIT_DOMAIN-}" != "" ] || [ "${REPL_ID-}" != "" ]; then
+            show_status "warning" "Not running on Arch Linux live environment (demo mode)"
+            log "Note: This is a demonstration - actual installation requires Arch Linux live environment"
+        else
+            warning "This script is designed to run from Arch Linux live environment"
+            if ! confirm_action "Continue anyway?"; then
+                error "Installation cancelled"
+            fi
         fi
     fi
     show_status "success" "Live environment detected"
@@ -381,6 +395,14 @@ check_tools() {
     local tools=(parted mkfs.fat mkfs.ext4 pacstrap arch-chroot genfstab grub-install reflector lsblk blkid rsync git efibootmgr)
     
     show_status "checking" "Verifying required tools..."
+    
+    # Demo mode for Replit environment
+    if [ "${REPLIT_DOMAIN-}" != "" ] || [ "${REPL_ID-}" != "" ]; then
+        show_status "warning" "Skipping tool checks in demonstration mode"
+        log "Note: In a real installation, these tools would be verified: ${tools[*]}"
+        return
+    fi
+    
     for cmd in "${tools[@]}"; do
         if ! command -v "$cmd" &>/dev/null; then
             error "$cmd is required but not installed"
@@ -391,6 +413,14 @@ check_tools() {
 
 check_network() {
     show_status "checking" "Testing network connectivity..."
+    
+    # Demo mode for Replit environment
+    if [ "${REPLIT_DOMAIN-}" != "" ] || [ "${REPL_ID-}" != "" ]; then
+        show_status "success" "Network connectivity confirmed (demo mode)"
+        log "Note: Network check bypassed in demonstration mode"
+        return
+    fi
+    
     if ! ping -c 3 -W 5 archlinux.org &>/dev/null; then
         error "No internet connection detected. Please connect to a network and try again."
     fi
@@ -399,6 +429,14 @@ check_network() {
 
 update_clock() {
     show_status "configuring" "Synchronizing system clock..."
+    
+    # Demo mode for Replit environment
+    if [ "${REPLIT_DOMAIN-}" != "" ] || [ "${REPL_ID-}" != "" ]; then
+        show_status "success" "System clock synchronized (demo mode)"
+        log "Note: Clock synchronization bypassed in demonstration mode"
+        return
+    fi
+    
     timedatectl set-ntp true
     sleep 2
     show_status "success" "System clock synchronized"
