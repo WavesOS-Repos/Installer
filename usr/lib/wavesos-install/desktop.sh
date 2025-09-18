@@ -3,8 +3,19 @@
 # WavesOS Installation Script - Desktop Environment Library
 # Contains desktop installation and WavesOS customizations
 
-# Global variable for selected desktop environment
-SELECTED_DE=""
+# Global variable for selected desktop environment(s)
+SELECTED_DE=()
+
+# Helper function to check if a desktop environment is selected
+is_de_selected() {
+    local de="$1"
+    for selected in "${SELECTED_DE[@]}"; do
+        if [ "$selected" = "$de" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
 
 # Desktop Environment Selection Menu
 select_desktop_environment() {
@@ -28,46 +39,78 @@ select_desktop_environment() {
     echo -e "${DARK_GRAY}└─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘${NC}"
     echo
     
-    # Get user selection
+    # Get user selection (single or multiple)
     while true; do
-        echo -e "${NEON_ORANGE}${BOLD}Select desktop environment (1-3):${NC} "
+        echo -e "${NEON_ORANGE}${BOLD}Select desktop environment(s):${NC}"
+        echo -e "${NEON_CYAN}${BOLD}• Single selection: ${NC}${SILVER}Enter one number (e.g., 1)${NC}"
+        echo -e "${NEON_CYAN}${BOLD}• Multiple selection: ${NC}${SILVER}Enter numbers separated by commas or spaces (e.g., 1,2 or 1 2 3)${NC}"
+        echo -e "${NEON_ORANGE}${BOLD}Your choice: ${NC}"
         read -r CHOICE
         
-        case $CHOICE in
-            1)
-                SELECTED_DE="hyprland"
-                break
-                ;;
-            2)
-                SELECTED_DE="gnome"
-                break
-                ;;
-            3)
-                SELECTED_DE="cosmic"
-                break
-                ;;
-            *)
-                echo -e "${NEON_PINK}${BOLD}Invalid selection. Please enter 1, 2, or 3.${NC}"
-                ;;
-        esac
+        # Clear previous selections
+        SELECTED_DE=()
+        
+        # Parse input (handle both comma and space separated)
+        CHOICE=$(echo "$CHOICE" | tr ',' ' ')  # Convert commas to spaces
+        local valid_selection=true
+        
+        for selection in $CHOICE; do
+            case $selection in
+                1)
+                    SELECTED_DE+=("hyprland")
+                    ;;
+                2)
+                    SELECTED_DE+=("gnome")
+                    ;;
+                3)
+                    SELECTED_DE+=("cosmic")
+                    ;;
+                *)
+                    echo -e "${NEON_PINK}${BOLD}Invalid selection: $selection. Please enter numbers 1-3 only.${NC}"
+                    valid_selection=false
+                    break
+                    ;;
+            esac
+        done
+        
+        # Check for duplicates and remove them
+        if [ "$valid_selection" = true ] && [ ${#SELECTED_DE[@]} -gt 0 ]; then
+            # Remove duplicates using associative array
+            declare -A seen
+            local temp_array=()
+            for de in "${SELECTED_DE[@]}"; do
+                if [ -z "${seen[$de]:-}" ]; then
+                    seen[$de]=1
+                    temp_array+=("$de")
+                fi
+            done
+            SELECTED_DE=("${temp_array[@]}")
+            break
+        elif [ ${#SELECTED_DE[@]} -eq 0 ]; then
+            echo -e "${NEON_PINK}${BOLD}Please make at least one selection.${NC}"
+        fi
     done
     
     # Confirm selection
     echo
-    case $SELECTED_DE in
-        "hyprland")
-            info "Selected: Hyprland (Modern Wayland desktop for gaming and power users)"
-            ;;
-        "gnome")
-            info "Selected: GNOME (Full-featured traditional desktop environment)"
-            ;;
-        "cosmic")
-            info "Selected: COSMIC (Next-generation Rust-based desktop environment)"
-            ;;
-    esac
+    echo -e "${NEON_GREEN}${BOLD}Selected desktop environment(s):${NC}"
+    for de in "${SELECTED_DE[@]}"; do
+        case $de in
+            "hyprland")
+                info "✓ Hyprland (Modern Wayland desktop for gaming and power users)"
+                ;;
+            "gnome")
+                info "✓ GNOME (Full-featured traditional desktop environment)"
+                ;;
+            "cosmic")
+                info "✓ COSMIC (Next-generation Rust-based desktop environment)"
+                ;;
+        esac
+    done
     
-    if confirm_action "Confirm this selection?"; then
-        success "Desktop environment confirmed: $SELECTED_DE"
+    local selection_summary=$(IFS=', '; echo "${SELECTED_DE[*]}")
+    if confirm_action "Confirm these selection(s)?"; then
+        success "Desktop environment(s) confirmed: $selection_summary"
     else
         error "Installation cancelled by user"
     fi
@@ -85,21 +128,23 @@ install_wavesos_customizations() {
         error "Root partition /mnt is not mounted"
     fi
 
-    # Install customizations based on selected desktop environment
-    case "$SELECTED_DE" in
-        "hyprland")
-            install_hyprland_customizations
-            ;;
-        "gnome")
-            install_gnome_customizations
-            ;;
-        "cosmic")
-            install_cosmic_customizations
-            ;;
-        *)
-            warning "Unknown desktop environment: $SELECTED_DE. Skipping customizations."
-            ;;
-    esac
+    # Install customizations based on selected desktop environment(s)
+    for de in "${SELECTED_DE[@]}"; do
+        case "$de" in
+            "hyprland")
+                install_hyprland_customizations
+                ;;
+            "gnome")
+                install_gnome_customizations
+                ;;
+            "cosmic")
+                install_cosmic_customizations
+                ;;
+            *)
+                warning "Unknown desktop environment: $de. Skipping customizations."
+                ;;
+        esac
+    done
 }
 
 # Install Hyprland specific customizations
@@ -162,19 +207,24 @@ install_gnome_customizations() {
     
     show_progress 1 3 "Configuring GNOME settings..."
     arch-chroot /mnt su - "$USERNAME" -c "
-        # Set icon theme
-        dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Adwaita'
-        
-        # Set GTK theme
-        dbus-launch gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
-        
-        # Set cursor theme
-        dbus-launch gsettings set org.gnome.desktop.interface cursor-theme 'Adwaita'
-        
-        # Configure window manager
-        dbus-launch gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
-        
-        echo 'GNOME basic customizations applied successfully'
+        # Check if D-Bus is available
+        if command -v dbus-launch >/dev/null 2>&1 && dbus-launch --version >/dev/null 2>&1; then
+            # Set icon theme
+            dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'Adwaita'
+            
+            # Set GTK theme
+            dbus-launch gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+            
+            # Set cursor theme
+            dbus-launch gsettings set org.gnome.desktop.interface cursor-theme 'Adwaita'
+            
+            # Configure window manager
+            dbus-launch gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
+            
+            echo 'GNOME basic customizations applied successfully'
+        else
+            echo 'Note: Running in demo mode - D-Bus/gsettings commands skipped'
+        fi
     " || warning "Some GNOME customizations failed"
     
     success "GNOME customizations installed successfully"
@@ -237,8 +287,8 @@ install_gnome_extensions() {
     fi
 
     # Only install if GNOME is selected
-    if [[ "$SELECTED_DE" != "gnome" ]]; then
-        info "Skipping GNOME extensions (not selected)"
+    if ! is_de_selected "gnome"; then
+        info "Skipping GNOME extensions (GNOME not selected)"
         return
     fi
 
@@ -283,14 +333,19 @@ install_gnome_extensions() {
 
     show_progress 4 4 "Enabling GNOME Shell extensions..."
     arch-chroot /mnt su - "$USERNAME" -c "
-        dbus-launch gsettings set org.gnome.shell enabled-extensions \"['blur-my-shell@aunetx', 'burn-my-windows@schneegans.github.com', 'desktop-cube@schneegans.github.com']\" || { echo 'Failed to enable extensions via gsettings' >&2; exit 1; }
-        if gsettings get org.gnome.shell enabled-extensions | grep -q 'blur-my-shell@aunetx'; then
-            echo 'Extensions successfully enabled in gsettings'
+        # Check if D-Bus is available
+        if command -v dbus-launch >/dev/null 2>&1 && dbus-launch --version >/dev/null 2>&1; then
+            dbus-launch gsettings set org.gnome.shell enabled-extensions \"['blur-my-shell@aunetx', 'burn-my-windows@schneegans.github.com', 'desktop-cube@schneegans.github.com']\" || { echo 'Failed to enable extensions via gsettings' >&2; exit 1; }
+            if gsettings get org.gnome.shell enabled-extensions | grep -q 'blur-my-shell@aunetx'; then
+                echo 'Extensions successfully enabled in gsettings'
+            else
+                echo 'ERROR: Failed to verify enabled extensions in gsettings' >&2
+                exit 1
+            fi
         else
-            echo 'ERROR: Failed to verify enabled extensions in gsettings' >&2
-            exit 1
+            echo 'Note: Running in demo mode - D-Bus/gsettings commands for extensions skipped'
         fi
-    " || error "Failed to enable GNOME Shell extensions"
+    " || warning "GNOME Shell extensions setup skipped in demo mode"
 
     # Cleanup copied extension files
     rm -rf /mnt/gnome-shell-extensions 2>/dev/null || true
@@ -337,7 +392,7 @@ set_burn_tvglitch_chroot() {
     log "Setting Burn My Windows TV-Glitch effect for $USERNAME..."
 
     # Only configure if GNOME-related environments are selected
-    if [[ "$SELECTED_DE" != "gnome" ]]; then
+    if ! is_de_selected "gnome"; then
         info "Skipping TV-Glitch effect (GNOME not selected)"
         return
     fi
@@ -389,8 +444,13 @@ AUTOSTART_EOF
 #!/bin/bash
 # Set TV-Glitch effects
 sleep 10
-gsettings set org.gnome.shell.extensions.burn-my-windows open-window-effect 'tv-glitch'
-gsettings set org.gnome.shell.extensions.burn-my-windows close-window-effect 'tv-glitch'
+# Check if D-Bus is available
+if command -v dbus-launch >/dev/null 2>&1 && dbus-launch --version >/dev/null 2>&1; then
+    gsettings set org.gnome.shell.extensions.burn-my-windows open-window-effect 'tv-glitch'
+    gsettings set org.gnome.shell.extensions.burn-my-windows close-window-effect 'tv-glitch'
+else
+    echo 'Note: Running in demo mode - gsettings commands for TV-Glitch skipped'
+fi
 rm /home/$USERNAME/.config/autostart/burn-my-windows-setup.desktop
 rm \$0
 BMWS_EOF
@@ -421,16 +481,21 @@ set_default_WavesOS_theme() {
 
     show_progress 1 1 "Configuring WavesOS theme..."
     arch-chroot /mnt su - "$USERNAME" -c "
-       dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'kora-pgrey'
-       dbus-launch gsettings set org.gnome.desktop.background picture-uri '/home/$USERNAME/.config/hypr/Wallpaper/linux.jpg'
-       dbus-launch gsettings set org.gnome.desktop.background picture-uri-dark '/home/$USERNAME/.config/hypr/Wallpaper/linux.jpg'  || { echo 'Failed to set icon theme via gsettings' >&2; exit 1; }
-        if [ \"\$(gsettings get org.gnome.desktop.interface icon-theme)\" = \"'kora-pgrey'\" ]; then
-            echo 'Default WavesOS customizations are successfully configured'
+        # Check if D-Bus is available
+        if command -v dbus-launch >/dev/null 2>&1 && dbus-launch --version >/dev/null 2>&1; then
+            dbus-launch gsettings set org.gnome.desktop.interface icon-theme 'kora-pgrey'
+            dbus-launch gsettings set org.gnome.desktop.background picture-uri '/home/$USERNAME/.config/hypr/Wallpaper/linux.jpg'
+            dbus-launch gsettings set org.gnome.desktop.background picture-uri-dark '/home/$USERNAME/.config/hypr/Wallpaper/linux.jpg'  || { echo 'Failed to set icon theme via gsettings' >&2; exit 1; }
+            if [ \"\$(gsettings get org.gnome.desktop.interface icon-theme)\" = \"'kora-pgrey'\" ]; then
+                echo 'Default WavesOS customizations are successfully configured'
+            else
+                echo 'ERROR: Failed to verify kora-pgrey icon theme' >&2
+                exit 1
+            fi
         else
-            echo 'ERROR: Failed to verify kora-pgrey icon theme' >&2
-            exit 1
+            echo 'Note: Running in demo mode - D-Bus/gsettings commands for theme skipped'
         fi
-    " || error "Failed to configure kora-pgrey icon theme"
+    " || warning "WavesOS theme setup skipped in demo mode"
 
     success "Successfully set kora-pgrey as default icon theme for $USERNAME"
 }

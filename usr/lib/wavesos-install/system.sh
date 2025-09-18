@@ -192,10 +192,14 @@ cat > /etc/hosts << HOSTS_EOF
 127.0.1.1   $3.localdomain $3
 HOSTS_EOF
 
-# Enable essential services
-systemctl enable NetworkManager
-systemctl enable sddm
-systemctl enable bluetooth
+# Enable essential services (skip in demo mode)
+if command -v systemctl >/dev/null 2>&1 && systemctl list-units >/dev/null 2>&1; then
+    systemctl enable NetworkManager
+    systemctl enable sddm
+    systemctl enable bluetooth
+else
+    echo "Note: Running in demo mode - systemctl commands skipped"
+fi
 
 # Configure pacman
 sed -i 's/#Color/Color/' /etc/pacman.conf

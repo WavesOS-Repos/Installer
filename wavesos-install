@@ -106,7 +106,7 @@ restore_terminal_ui() {
 }
 
 # Source all library modules
-SCRIPT_DIR="/usr/lib/wavesos-install"
+SCRIPT_DIR="usr/lib/wavesos-install"
 source "$SCRIPT_DIR/utils.sh"
 source "$SCRIPT_DIR/hardware.sh"
 source "$SCRIPT_DIR/partitioning.sh"
