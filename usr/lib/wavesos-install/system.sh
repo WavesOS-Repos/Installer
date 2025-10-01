@@ -7,30 +7,55 @@
 update_mirrorlist() {
     section_header "System • Mirrors"
     log "Updating mirrorlist for optimal download speeds..."
-    echo "Select your country for optimal mirrors:"
-    echo "1) United States    2) United Kingdom   3) Germany"
-    echo "4) France          5) Canada           6) Australia"
-    echo "7) India           8) Japan            9) Custom"
     
-    read -p "Select country (1-9): " COUNTRY_CHOICE
-    case $COUNTRY_CHOICE in
-        1) COUNTRY="US" ;;
-        2) COUNTRY="GB" ;;
-        3) COUNTRY="DE" ;;
-        4) COUNTRY="FR" ;;
-        5) COUNTRY="CA" ;;
-        6) COUNTRY="AU" ;;
-        7) COUNTRY="IN" ;;
-        8) COUNTRY="JP" ;;
-        9) read -p "Enter country code (e.g., SE for Sweden): " COUNTRY ;;
-        *) COUNTRY="US" ;;
-    esac
-    
-    info "Updating mirrors for country: $COUNTRY"
-    reflector --country "$COUNTRY" --age 12 --protocol https --sort rate --save /etc/pacman.d/mirrorlist || {
-        warning "Failed to update mirrorlist, using default"
+    info "Installing worldwide mirrors (compulsory)..."
+    reflector --age 12 --protocol https --sort rate --save /etc/pacman.d/mirrorlist || {
+        warning "Failed to update worldwide mirrorlist, using default"
     }
-    success "Mirrorlist updated"
+    success "Worldwide mirrors installed"
+    
+    echo
+    echo "Would you like to add country-specific mirrors for better local speeds?"
+    echo "1) Yes, add country mirrors    2) No, use worldwide only"
+    
+    read -p "Select option (1-2): " ADD_COUNTRY
+    
+    if [ "$ADD_COUNTRY" = "1" ]; then
+        echo
+        echo "Select your country for additional mirrors:"
+        echo "1) United States    2) United Kingdom   3) Germany"
+        echo "4) France          5) Canada           6) Australia"
+        echo "7) India           8) Japan            9) Custom"
+        
+        read -p "Select country (1-9): " COUNTRY_CHOICE
+        case $COUNTRY_CHOICE in
+            1) COUNTRY="US" ;;
+            2) COUNTRY="GB" ;;
+            3) COUNTRY="DE" ;;
+            4) COUNTRY="FR" ;;
+            5) COUNTRY="CA" ;;
+            6) COUNTRY="AU" ;;
+            7) COUNTRY="IN" ;;
+            8) COUNTRY="JP" ;;
+            9) read -p "Enter country code (e.g., SE for Sweden): " COUNTRY ;;
+            *) COUNTRY="US" ;;
+        esac
+        
+        info "Adding mirrors for country: $COUNTRY"
+        reflector --country "$COUNTRY" --age 12 --protocol https --sort rate --save /tmp/country-mirrors || {
+            warning "Failed to fetch country-specific mirrors"
+        }
+        
+        if [ -f /tmp/country-mirrors ]; then
+            cat /tmp/country-mirrors >> /etc/pacman.d/mirrorlist
+            rm /tmp/country-mirrors
+            success "Country-specific mirrors added"
+        fi
+    else
+        info "Using worldwide mirrors only"
+    fi
+    
+    success "Mirrorlist configuration completed"
 }
 
 # Install base system - moved to packages.sh
