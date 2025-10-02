@@ -108,6 +108,9 @@ install_hyprland_packages() {
         grim
         grimblast-git
         sweet-cursors-hyprcursor-git
+        nvtop
+        polkit-gnome
+        gnome-disk-utility
             )
     
     info "Installing ${#hyprland_packages[@]} Hyprland packages..."
