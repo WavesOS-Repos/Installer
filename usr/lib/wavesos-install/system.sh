@@ -231,11 +231,22 @@ sed -i 's/#ParallelDownloads = 5/ParallelDownloads = 5/' /etc/pacman.conf
 
 # Create user
 useradd -m -G wheel,audio,video,optical,storage -s /bin/bash "$4"
-echo "Set password for user $4:"
-passwd "$4"
 
-echo "Set password for root:"
-passwd
+# Set user password with validation loop
+while true; do
+    echo "Set password for user $4:"
+    passwd "$4" && break
+    echo "Password setting failed. Please try again."
+    echo
+done
+
+# Set root password with validation loop
+while true; do
+    echo "Set password for root:"
+    passwd && break
+    echo "Password setting failed. Please try again."
+    echo
+done
 
 # Configure sudo
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
