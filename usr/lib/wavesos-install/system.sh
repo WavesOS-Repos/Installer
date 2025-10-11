@@ -125,11 +125,11 @@ generate_fstab() {
     fi
 }
 
-# Configure system settings
+# Configure system settings - Collect all user input early
 configure_system() {
     section_header "System • Configure"
     log "Configuring system settings..."
-    
+
     # Locale configuration
     echo "Select system locale:"
     echo "1) en_US.UTF-8 (English - United States)"
@@ -138,7 +138,7 @@ configure_system() {
     echo "4) fr_FR.UTF-8 (French - France)"
     echo "5) es_ES.UTF-8 (Spanish - Spain)"
     echo "6) Custom locale"
-    
+
     read -p "Select locale (1-6): " LOCALE_CHOICE
     case $LOCALE_CHOICE in
         1) LOCALE="en_US.UTF-8 UTF-8" ;;
@@ -149,7 +149,7 @@ configure_system() {
         6) read -p "Enter locale (e.g., ja_JP.UTF-8): " LOCALE ;;
         *) LOCALE="en_US.UTF-8 UTF-8" ;;
     esac
-    
+
     # Timezone configuration
     echo
     echo "Select timezone:"
@@ -157,7 +157,7 @@ configure_system() {
     echo "3) Europe/London       4) Europe/Berlin"
     echo "5) Asia/Tokyo          6) Asia/Kolkata"
     echo "7) Australia/Sydney    8) Custom timezone"
-    
+
     read -p "Select timezone (1-8): " TZ_CHOICE
     case $TZ_CHOICE in
         1) TIMEZONE="America/New_York" ;;
@@ -170,12 +170,12 @@ configure_system() {
         8) read -p "Enter timezone (e.g., Europe/Stockholm): " TIMEZONE ;;
         *) TIMEZONE="UTC" ;;
     esac
-    
+
     # Hostname
     echo
     read -p "Enter hostname for this system (default: wavesos): " HOSTNAME
     HOSTNAME=${HOSTNAME:-wavesos}
-    
+
     # User configuration
     echo
     read -p "Enter username for the main user account: " USERNAME
@@ -183,7 +183,47 @@ configure_system() {
         warning "Invalid username. Please enter a valid username (not root):"
         read -p "Username: " USERNAME
     done
-    
+
+    # Get user password with validation loop
+    echo
+    while true; do
+        read -sp "Enter password for user $USERNAME: " USER_PASSWORD
+        echo
+        read -sp "Confirm password for user $USERNAME: " USER_PASSWORD_CONFIRM
+        echo
+        if [ "$USER_PASSWORD" = "$USER_PASSWORD_CONFIRM" ]; then
+            if [ -n "$USER_PASSWORD" ]; then
+                break
+            else
+                warning "Password cannot be empty. Please try again."
+                echo
+            fi
+        else
+            warning "Passwords do not match. Please try again."
+            echo
+        fi
+    done
+
+    # Get root password with validation loop
+    echo
+    while true; do
+        read -sp "Enter password for root: " ROOT_PASSWORD
+        echo
+        read -sp "Confirm password for root: " ROOT_PASSWORD_CONFIRM
+        echo
+        if [ "$ROOT_PASSWORD" = "$ROOT_PASSWORD_CONFIRM" ]; then
+            if [ -n "$ROOT_PASSWORD" ]; then
+                break
+            else
+                warning "Password cannot be empty. Please try again."
+                echo
+            fi
+        else
+            warning "Passwords do not match. Please try again."
+            echo
+        fi
+    done
+
     success "System configuration collected"
 }
 
@@ -232,21 +272,11 @@ sed -i 's/#ParallelDownloads = 5/ParallelDownloads = 5/' /etc/pacman.conf
 # Create user
 useradd -m -G wheel,audio,video,optical,storage -s /bin/bash "$4"
 
-# Set user password with validation loop
-while true; do
-    echo "Set password for user $4:"
-    passwd "$4" && break
-    echo "Password setting failed. Please try again."
-    echo
-done
+# Set user password using stored value
+echo "$4:$5" | chpasswd
 
-# Set root password with validation loop
-while true; do
-    echo "Set password for root:"
-    passwd && break
-    echo "Password setting failed. Please try again."
-    echo
-done
+# Set root password using stored value
+echo "root:$6" | chpasswd
 
 # Configure sudo
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
@@ -258,14 +288,14 @@ echo "System configuration completed successfully"
 EOF
 
     chmod +x /mnt/setup_system.sh
-    
-    # Execute in chroot
-    if arch-chroot /mnt /setup_system.sh "$LOCALE" "$TIMEZONE" "$HOSTNAME" "$USERNAME"; then
+
+    # Execute in chroot with stored passwords
+    if arch-chroot /mnt /setup_system.sh "$LOCALE" "$TIMEZONE" "$HOSTNAME" "$USERNAME" "$USER_PASSWORD" "$ROOT_PASSWORD"; then
         success "System configuration applied successfully"
     else
         error "Failed to apply system configuration"
     fi
-    
+
     # Cleanup
     rm /mnt/setup_system.sh
 }
