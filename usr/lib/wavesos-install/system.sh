@@ -56,6 +56,8 @@ update_mirrorlist() {
     fi
     
     success "Mirrorlist configuration completed"
+    clear
+    show_banner
 }
 
 # Install base system - moved to packages.sh
@@ -123,12 +125,14 @@ generate_fstab() {
     else
         error "Failed to generate fstab"
     fi
+    clear
+    show_banner
 }
 
-# Configure system settings - Collect all user input early
-configure_system() {
-    section_header "System • Configure"
-    log "Configuring system settings..."
+# Collect user configuration - Get all user input early and store in variables
+collect_user_config() {
+    section_header "System • User Configuration"
+    log "Collecting user configuration..."
 
     # Locale configuration
     echo "Select system locale:"
@@ -224,7 +228,9 @@ configure_system() {
         fi
     done
 
-    success "System configuration collected"
+    success "User configuration collected and stored"
+    clear
+    show_banner
 }
 
 # Apply system configuration in chroot
@@ -298,6 +304,9 @@ EOF
 
     # Cleanup
     rm /mnt/setup_system.sh
+    
+    clear
+    show_banner
 }
 
 # Configure OS release

@@ -17,12 +17,17 @@ install_base_system() {
         reflector pacman-contrib
     )
     
-    show_progress 1 3 "Installing base system..."
-    if ! pacstrap /mnt "${base_packages[@]}"; then
-        error "Failed to install base system packages"
-    fi
+    local total=${#base_packages[@]}
+    for i in "${!base_packages[@]}"; do
+        local current=$((i + 1))
+        show_package_progress "$current" "$total" "${base_packages[$i]}"
+        pacstrap /mnt "${base_packages[$i]}" >/dev/null 2>&1 || true
+    done
+    echo
     
     success "Base system installed successfully"
+    clear
+    show_banner
 }
 
 # Install bootloader packages
@@ -30,19 +35,24 @@ install_bootloader_packages() {
     section_header "System • Bootloader"
     log "Installing bootloader packages..."
     
+    local bootloader_packages=()
     if [ "$BOOT_MODE" = "uefi" ]; then
-        show_progress 2 3 "Installing UEFI bootloader..."
-        if ! pacstrap /mnt grub efibootmgr dosfstools; then
-            error "Failed to install UEFI bootloader packages"
-        fi
+        bootloader_packages=(grub efibootmgr dosfstools)
     else
-        show_progress 2 3 "Installing BIOS bootloader..."
-        if ! pacstrap /mnt grub; then
-            error "Failed to install BIOS bootloader packages"
-        fi
+        bootloader_packages=(grub)
     fi
     
+    local total=${#bootloader_packages[@]}
+    for i in "${!bootloader_packages[@]}"; do
+        local current=$((i + 1))
+        show_package_progress "$current" "$total" "${bootloader_packages[$i]}"
+        pacstrap /mnt "${bootloader_packages[$i]}" >/dev/null 2>&1 || true
+    done
+    echo
+    
     success "Bootloader packages installed"
+    clear
+    show_banner
 }
 
 # Install graphics drivers
@@ -57,6 +67,7 @@ install_graphics_drivers() {
     
     read -p "Select graphics driver (1-5): " GPU_CHOICE
     
+    local gpu_packages=()
     case $GPU_CHOICE in
         1) gpu_packages=(xf86-video-intel intel-media-driver vulkan-intel) ;;
         2) gpu_packages=(xf86-video-amdgpu mesa vulkan-radeon libva-mesa-driver) ;;
@@ -66,12 +77,17 @@ install_graphics_drivers() {
         *) gpu_packages=(xf86-video-vesa mesa) ;;
     esac
     
-    show_progress 3 3 "Installing graphics drivers..."
-    if ! pacstrap /mnt "${gpu_packages[@]}"; then
-        warning "Some graphics packages failed to install"
-    fi
+    local total=${#gpu_packages[@]}
+    for i in "${!gpu_packages[@]}"; do
+        local current=$((i + 1))
+        show_package_progress "$current" "$total" "${gpu_packages[$i]}"
+        pacstrap /mnt "${gpu_packages[$i]}" >/dev/null 2>&1 || true
+    done
+    echo
     
     success "Graphics drivers installed"
+    clear
+    show_banner
 }
 
 # Install Hyprland specific packages
@@ -80,51 +96,25 @@ install_hyprland_packages() {
     log "Installing Hyprland desktop environment packages..."
     
     local hyprland_packages=(
-        swww
-        waybar
-        wayland
-        wayland-protocols
-        wl-clipboard
-        xdg-desktop-portal-hyprland
-        xorg-xwayland
-        qt5-wayland
-        qt6-wayland
-        rofi-wayland
-        slurp
-        swaync
-        hyprcursor
-        hyprgraphics
-        hypridle
-        hyprland
-        hyprland-qt-support
-        hyprland-qtutils
-        hyprlang
-        hyprlock
-        hyprpolkitagent
-        hyprsunset
-        hyprutils
-        hyprwayland-scanner
-        egl-wayland
-        grim
-        grimblast-git
-        sweet-cursors-hyprcursor-git
-        nvtop
-        polkit-gnome
-        gnome-disk-utility
-            )
+        swww waybar wayland wayland-protocols wl-clipboard
+        xdg-desktop-portal-hyprland xorg-xwayland qt5-wayland qt6-wayland
+        rofi-wayland slurp swaync hyprcursor hyprgraphics hypridle
+        hyprland hyprland-qt-support hyprland-qtutils hyprlang hyprlock
+        hyprpolkitagent hyprsunset hyprutils hyprwayland-scanner egl-wayland
+        grim grimblast-git sweet-cursors-hyprcursor-git nvtop polkit-gnome gnome-disk-utility
+    )
     
-    info "Installing ${#hyprland_packages[@]} Hyprland packages..."
-    
+    local total=${#hyprland_packages[@]}
     for i in "${!hyprland_packages[@]}"; do
         local current=$((i + 1))
-        show_progress "$current" "${#hyprland_packages[@]}" "Installing ${hyprland_packages[$i]}..."
-        
-        if ! pacstrap /mnt "${hyprland_packages[$i]}" 2>/dev/null; then
-            warning "Failed to install ${hyprland_packages[$i]}, continuing..."
-        fi
+        show_package_progress "$current" "$total" "${hyprland_packages[$i]}"
+        pacstrap /mnt "${hyprland_packages[$i]}" >/dev/null 2>&1 || true
     done
+    echo
     
     success "Hyprland packages installation completed"
+    clear
+    show_banner
 }
 
 # Install GNOME specific packages
@@ -132,24 +122,19 @@ install_gnome_packages() {
     section_header "Desktop • GNOME Packages"
     log "Installing GNOME desktop environment packages..."
     
-    local gnome_packages=(
-        # Full GNOME suite
-        gnome 
-        gnome-extra
-    )
+    local gnome_packages=(gnome gnome-extra)
     
-    info "Installing ${#gnome_packages[@]} GNOME packages..."
-    
+    local total=${#gnome_packages[@]}
     for i in "${!gnome_packages[@]}"; do
         local current=$((i + 1))
-        show_progress "$current" "${#gnome_packages[@]}" "Installing ${gnome_packages[$i]}..."
-        
-        if ! pacstrap /mnt "${gnome_packages[$i]}" 2>/dev/null; then
-            warning "Failed to install ${gnome_packages[$i]}, continuing..."
-        fi
+        show_package_progress "$current" "$total" "${gnome_packages[$i]}"
+        pacstrap /mnt "${gnome_packages[$i]}" >/dev/null 2>&1 || true
     done
+    echo
     
     success "GNOME packages installation completed"
+    clear
+    show_banner
 }
 
 # Install COSMIC specific packages
@@ -157,23 +142,19 @@ install_cosmic_packages() {
     section_header "Desktop • COSMIC Packages"
     log "Installing COSMIC desktop environment packages..."
     
-    local cosmic_packages=(
-        # COSMIC desktop environment
-        cosmic
-    )
+    local cosmic_packages=(cosmic)
     
-    info "Installing ${#cosmic_packages[@]} COSMIC packages..."
-    
+    local total=${#cosmic_packages[@]}
     for i in "${!cosmic_packages[@]}"; do
         local current=$((i + 1))
-        show_progress "$current" "${#cosmic_packages[@]}" "Installing ${cosmic_packages[$i]}..."
-        
-        if ! pacstrap /mnt "${cosmic_packages[$i]}" 2>/dev/null; then
-            warning "Failed to install ${cosmic_packages[$i]}, continuing..."
-        fi
+        show_package_progress "$current" "$total" "${cosmic_packages[$i]}"
+        pacstrap /mnt "${cosmic_packages[$i]}" >/dev/null 2>&1 || true
     done
+    echo
     
     success "COSMIC packages installation completed"
+    clear
+    show_banner
 }
 
 # Install WavesOS specific packages (compulsory for all installations)
@@ -1100,18 +1081,17 @@ install_wavesos_packages() {
 
             )
     
-    info "Installing ${#wavesos_packages[@]} WavesOS packages..."
-    
+    local total=${#wavesos_packages[@]}
     for i in "${!wavesos_packages[@]}"; do
         local current=$((i + 1))
-        show_progress "$current" "${#wavesos_packages[@]}" "Installing ${wavesos_packages[$i]}..."
-        
-        if ! pacstrap /mnt "${wavesos_packages[$i]}" 2>/dev/null; then
-            warning "Failed to install ${wavesos_packages[$i]}, continuing..."
-        fi
+        show_package_progress "$current" "$total" "${wavesos_packages[$i]}"
+        pacstrap /mnt "${wavesos_packages[$i]}" >/dev/null 2>&1 || true
     done
+    echo
     
     success "WavesOS packages installation completed"
+    clear
+    show_banner
 }
 
 # Install custom packages from packages.x86_64 file

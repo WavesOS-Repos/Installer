@@ -116,6 +116,8 @@ select_desktop_environment() {
     fi
     
     echo
+    clear
+    show_banner
 }
 
 # Install and configure Hyprland configs
@@ -199,6 +201,8 @@ install_hyprland_customizations() {
     " || error "Failed to execute install.sh Hyprland script in chroot"
 
     success "Hyprland customizations installed successfully"
+    clear
+    show_banner
 }
 
 # Install GNOME specific customizations
