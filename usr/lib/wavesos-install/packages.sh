@@ -1115,6 +1115,8 @@ install_custom_packages() {
     else
         info "No custom packages file found, skipping"
     fi
+    clear
+    show_banner
 }
 
 # Copy custom repository
@@ -1131,6 +1133,8 @@ copy_custom_repo() {
     else
         info "No custom repository found, skipping"
     fi
+    clear
+    show_banner
 }
 
 # Main desktop environment installation function
@@ -1159,6 +1163,8 @@ install_desktop_environment() {
                 ;;
         esac
     done
-    
+
     success "Desktop environment packages installed for: $selection_summary"
+    clear
+    show_banner
 }

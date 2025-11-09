@@ -61,6 +61,8 @@ configure_partitions() {
     if [ "$ROOT_SIZE" -lt 20 ]; then
         error "Root partition must be at least 20GB for WavesOS"
     fi
+    clear
+    show_banner
 }
 
 # Confirm partitioning
@@ -84,6 +86,8 @@ confirm_partitioning() {
     if [ "$CONFIRM" != "YES" ]; then
         error "Installation cancelled by user"
     fi
+    clear
+    show_banner
 }
 
 # Enhanced partitioning with better error handling
@@ -192,6 +196,8 @@ create_partitions() {
     
     [ ! -b "$ROOT_PART" ] && error "Root partition $ROOT_PART was not created"
     success "Partitions created successfully"
+    clear
+    show_banner
 }
 
 # Format partitions with enhanced error handling
@@ -219,6 +225,8 @@ format_partitions() {
     
     show_progress 4 4 "Partition formatting complete"
     success "All partitions formatted successfully"
+    clear
+    show_banner
 }
 
 # Mount partitions with verification
@@ -245,6 +253,8 @@ mount_partitions() {
         mkdir -p /mnt/home/storage
         mount "$STORAGE_PART" /mnt/home/storage || error "Failed to mount storage partition"
     fi
-    
+
     success "All partitions mounted successfully"
+    clear
+    show_banner
 }

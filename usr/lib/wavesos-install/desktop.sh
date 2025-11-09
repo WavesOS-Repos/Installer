@@ -147,6 +147,9 @@ install_wavesos_customizations() {
                 ;;
         esac
     done
+
+    clear
+    show_banner
 }
 
 # Install Hyprland specific customizations
@@ -201,8 +204,6 @@ install_hyprland_customizations() {
     " || error "Failed to execute install.sh Hyprland script in chroot"
 
     success "Hyprland customizations installed successfully"
-    clear
-    show_banner
 }
 
 # Install GNOME specific customizations
@@ -230,8 +231,10 @@ install_gnome_customizations() {
             echo 'Note: Running in demo mode - D-Bus/gsettings commands skipped'
         fi
     " || warning "Some GNOME customizations failed"
-    
+
     success "GNOME customizations installed successfully"
+    clear
+    show_banner
 }
 
 # Install COSMIC specific customizations
@@ -243,41 +246,47 @@ install_cosmic_customizations() {
         # Basic COSMIC configuration
         echo 'COSMIC desktop environment configured successfully'
     " || warning "Some COSMIC customizations failed"
-    
+
     success "COSMIC customizations installed successfully"
+    clear
+    show_banner
 }
 
-# Install WavesSDDM theme (compulsory for all desktop environments)
+# Install WavesSDDM theme (COMPULSORY for ALL desktop environments)
 install_SDDM_theme() {
     section_header "Desktop • SDDM Theme"
-    log "Installing WavesOS SDDM theme (compulsory)..."
+    log "Installing WavesOS SDDM theme (COMPULSORY)..."
 
     # Verify /mnt is mounted
     if ! mountpoint -q /mnt; then
         error "Root partition /mnt is not mounted"
     fi
 
-    show_progress 2 5 "Copying WavesSDDM Theme..."
-    # Copy SDDM configs to chroot
-    if [ -d /root/WavesSDDM ]; then
-        cp -r /root/WavesSDDM /mnt/ || error "Failed to copy WavesSDDM to /mnt/"
-    else
-        error "WavesSDDM directory not found at /root/WavesSDDM"
+    show_progress 1 5 "Verifying WavesSDDM directory..."
+    if [ ! -d /root/WavesSDDM ]; then
+        error "WavesSDDM directory not found at /root/WavesSDDM - This is a compulsory component!"
     fi
-  
-    show_progress 4 5 "Setting up SDDM configurations..."
-    # Set permissions and run install.sh in chroot
+
+    show_progress 2 5 "Copying WavesSDDM Theme..."
+    cp -r /root/WavesSDDM /mnt/ || error "Failed to copy WavesSDDM to /mnt/"
+
+    show_progress 3 5 "Setting executable permissions..."
+    arch-chroot /mnt chmod +x /WavesSDDM/install.sh || error "Failed to set executable permissions on install.sh"
+
+    show_progress 4 5 "Executing SDDM theme installation..."
     arch-chroot /mnt bash -c "
         if [ -f /WavesSDDM/install.sh ]; then
-            chmod +x /WavesSDDM/install.sh 
             /WavesSDDM/install.sh || { echo 'WavesSDDM install.sh failed' >&2; exit 1; }
         else
             echo 'WavesSDDM install.sh not found' >&2
             exit 1
         fi
     " || error "Failed to execute SDDM install.sh script in chroot"
-    
-    success "WavesOS SDDM Theme installed successfully"
+
+    show_progress 5 5 "WavesSDDM installation complete"
+    success "WavesOS SDDM Theme installed successfully (COMPULSORY component)"
+    clear
+    show_banner
 }
 
 # Install GNOME extensions (only for GNOME or both)
@@ -355,6 +364,8 @@ install_gnome_extensions() {
     rm -rf /mnt/gnome-shell-extensions 2>/dev/null || true
 
     success "GNOME Shell extensions installed and enabled successfully for $USERNAME"
+    clear
+    show_banner
 }
 
 # Setup Kando autostart
@@ -388,6 +399,8 @@ EOF
     " || error "Failed to configure kando-bin autostart"
 
     success "kando-bin autostart configured successfully for $USERNAME"
+    clear
+    show_banner
 }
 
 # Set TV-Glitch effect (only for environments that support it)
@@ -465,6 +478,8 @@ BMWS_EOF
     " || error "Failed to configure TV-Glitch effect"
 
     success "TV-Glitch effect configured successfully for $USERNAME"
+    clear
+    show_banner
 }
 
 # Set default WavesOS theme
@@ -502,4 +517,6 @@ set_default_WavesOS_theme() {
     " || warning "WavesOS theme setup skipped in demo mode"
 
     success "Successfully set kora-pgrey as default icon theme for $USERNAME"
+    clear
+    show_banner
 }

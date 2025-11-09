@@ -298,7 +298,9 @@ EOF
     else
         error "CRITICAL BOOTLOADER INSTALLATION FAILED - This will cause boot failure"
     fi
-    
+
     # Cleanup
     rm /mnt/install_bootloader.sh
+    clear
+    show_banner
 }

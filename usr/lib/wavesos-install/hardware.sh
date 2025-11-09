@@ -44,6 +44,8 @@ detect_disks() {
     fi
     
     show_status "success" "Found ${#DISK_LIST[@]} suitable disk(s) for installation"
+    clear
+    show_banner
 }
 
 # Display hardware specs with futuristic styling
@@ -87,6 +89,8 @@ show_hardware() {
     
     echo -e "${NEON_CYAN}${BOLD}Press Enter to continue...${NC}"
     read -r
+    clear
+    show_banner
 }
 
 # Disk selection with enhanced validation and futuristic UI
@@ -119,32 +123,32 @@ select_disks() {
     
     SYS_DISK="/dev/$(echo "${DISK_LIST[$SYS_DISK_IDX]}" | awk '{print $1}')"
     show_status "success" "Selected system disk: $SYS_DISK"
-    
+
     # Verify disk is not mounted
     if mount | grep -q "$SYS_DISK"; then
         error "Selected disk $SYS_DISK appears to be in use. Please unmount it first."
     fi
-    
+
     # Remove selected disk from list
     unset 'DISK_LIST[$SYS_DISK_IDX]'
     DISK_LIST=("${DISK_LIST[@]}") # Reindex array
-    
+
     # Storage disk selection (optional) with enhanced UI
     STORE_DISK=""
     if [ ${#DISK_LIST[@]} -gt 0 ]; then
         echo
         echo -e "${NEON_GREEN}${BOLD}Remaining disks for additional storage:${NC}"
         echo -e "${DARK_GRAY}┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐${NC}"
-        
+
         for i in "${!DISK_LIST[@]}"; do
             read -r name size type tran hotplug <<<"${DISK_LIST[$i]}"
             model=$(lsblk -d -n -o MODEL "/dev/$name" 2>/dev/null || echo "Unknown")
             printf "${DARK_GRAY}│${NC} ${NEON_CYAN}${BOLD}%d)${NC} ${NEON_GREEN}/dev/%-8s${NC} ${DARK_GRAY}-${NC} ${SILVER}%-8s${NC} ${DARK_GRAY}(${NC}${SILVER}%s${NC} ${DARK_GRAY}via${NC} ${SILVER}%s${NC}${DARK_GRAY})${NC} ${DARK_GRAY}-${NC} ${SILVER}%-40s${NC} ${DARK_GRAY}│${NC}\n" "$i" "$name" "$size" "$type" "$tran" "$model"
         done
-        
+
         echo -e "${DARK_GRAY}└─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘${NC}"
         echo
-        
+
         echo -e "${NEON_ORANGE}${BOLD}Select storage disk number (or press Enter for none):${NC} "
         read -r STORE_DISK_IDX
         if [[ "$STORE_DISK_IDX" =~ ^[0-9]+$ ]] && [ "$STORE_DISK_IDX" -lt ${#DISK_LIST[@]} ]; then
@@ -152,6 +156,8 @@ select_disks() {
             show_status "success" "Selected storage disk: $STORE_DISK"
         fi
     fi
+    clear
+    show_banner
 }
 
 # Enhanced boot mode detection with futuristic UI
@@ -172,4 +178,6 @@ detect_boot_mode() {
         PTABLE="msdos"
         show_status "success" "BIOS system detected, using MBR partition table"
     fi
+    clear
+    show_banner
 }

@@ -336,6 +336,8 @@ configure_os_release() {
     fi
 
     success "Successfully configured /etc/os-release for WavesOS"
+    clear
+    show_banner
 }
 
 # Final system verification
@@ -413,6 +415,8 @@ verify_installation() {
     
     if [ $checks_passed -ge 4 ]; then
         success "System verification passed! Installation should be bootable."
+        clear
+        show_banner
         return 0
     else
         error "System verification failed! Installation may not boot properly."

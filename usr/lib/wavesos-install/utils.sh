@@ -415,6 +415,8 @@ check_root() {
     else
         show_status "success" "Root privileges confirmed"
     fi
+    clear
+    show_banner
 }
 
 check_live_env() {
@@ -432,6 +434,8 @@ check_live_env() {
         fi
     fi
     show_status "success" "Live environment detected"
+    clear
+    show_banner
 }
 
 check_tools() {
@@ -452,6 +456,8 @@ check_tools() {
         fi
     done
     show_status "success" "All required tools are available"
+    clear
+    show_banner
 }
 
 check_network() {
@@ -468,6 +474,8 @@ check_network() {
         error "No internet connection detected. Please connect to a network and try again."
     fi
     show_status "success" "Network connectivity confirmed"
+    clear
+    show_banner
 }
 
 update_clock() {
@@ -483,6 +491,8 @@ update_clock() {
     timedatectl set-ntp true
     sleep 2
     show_status "success" "System clock synchronized"
+    clear
+    show_banner
 }
 
 # Enhanced cleanup with visual feedback
@@ -498,8 +508,10 @@ cleanup_installation() {
     umount /mnt/home/storage 2>/dev/null || true
     umount /mnt/boot 2>/dev/null || true
     umount /mnt 2>/dev/null || true
-    
+
     show_status "success" "Cleanup completed"
+    clear
+    show_banner
 }
 
 # Futuristic installation summary
